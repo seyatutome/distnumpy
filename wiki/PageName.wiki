@@ -2,7 +2,7 @@
 
 = Introduction =
 
-Alpha state - only a fraction of NumPy? is implemented.
+Alpha state - only a fraction of NumPy is implemented.
 
 
 
