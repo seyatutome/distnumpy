@@ -1,0 +1,9 @@
+#summary Distributed version of NumPy using MPI.
+
+= Introduction =
+
+Alpha state - only a fraction of NumPy? is implemented.
+
+
+
+= Details =
