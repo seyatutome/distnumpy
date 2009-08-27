@@ -1,0 +1,36 @@
+#summary Supported NumPy API
+
+
+= Fully supported Distributed Arrays API in NumPy =
+
+== C API ==
+||PyUFunc_GenericFunction||
+||PyUFunc_Reduce||
+||PyArray_Flatten (returns a non-distributed arrat)||
+||PyArray_Ravel (returns a non-distributed arrat)||
+||PyArray_NewCopy||
+||PyArray_Empty||
+||PyArray_Zeros||
+
+
+
+== Python API ==
+||array||
+||empty||
+||zeros||
+||ufunc||
+||ufunc.reduce (Only view covering the whole distributed array is supported)||
+||print||
+||ravel (returns a non-distributed array)||
+||flatten (returns a non-distributed array)||
+
+
+= NumPy API not supported =
+
+== C API ==
+||PyArray_Newshape||
+
+
+== Python API ==
+||any()||
+||all()||
