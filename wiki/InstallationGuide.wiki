@@ -1,13 +1,14 @@
 #summary Installation Guide
 
-= Introduction =
+== Requirements ==
 
-Add your content here.
+Beside the requirements described in `INSTALL.txt`, you need a working MPI-2 installation. 
+The MPI-2 installation must expose the `mpicc` in the `$PATH`.
 
+== Installation ==
 
-= Details =
+To install DistNumPy run the following command:
 
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
+`CC="mpicc" python dnumpy/setup.py install --prefix /you/dir/`
+
+And the make sure that `/you/dir/` is in your `$PYTHONPATH`.
