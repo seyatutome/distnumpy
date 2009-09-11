@@ -1,7 +1,6 @@
-#summary How a array is distributed between processes.
+#summary How arrays are distributed between processes.
 
 <h1> Introduction </h1>
-
 
 <h2> Contiguous Distribution </h2>
 <p>
