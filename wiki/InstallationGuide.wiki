@@ -10,4 +10,4 @@ To install DistNumPy run the following command:
 
 `CC="mpicc" python dnumpy/setup.py install --prefix /you/dir/`
 
-And the make sure that `/you/dir/` is in your `$PYTHONPATH`.
+And then make sure that `/you/dir/` is in your `$PYTHONPATH`.
