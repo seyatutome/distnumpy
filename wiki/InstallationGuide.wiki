@@ -3,6 +3,7 @@
 == Requirements ==
 
 Beside the requirements described in `INSTALL.txt`, you need a working MPI-2 installation and the MPI-2 installation must expose `mpicc` in `$PATH`.
+A MPI-2 implementation named MPICH2 is available [http://www.mcs.anl.gov/research/projects/mpich2/ her].
 
 == Installation ==
 
