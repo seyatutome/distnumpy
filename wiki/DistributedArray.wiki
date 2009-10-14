@@ -2,6 +2,5 @@
 
 = Introduction =
 [http://code.google.com/p/distnumpy/source/browse/trunk/dnumpy/numpy/core/include/numpy/ndarrayobject.h#511 PyArrayObject]  is the fundamental data structure in NumPy. It can represent to different things:
-  *An array with all needed meta-data including a pointer to the memory where the array content is located. 
-  *An array-view, which also has all needed meta-data but instead of a pointer the array content, it has a pointer to a array that has the array content. 
-
+  * An array with all needed meta-data including a pointer to the memory where the array content is located. 
+  * An array-view, which also has all needed meta-data but instead of a pointer the array content, it has a pointer to a array that has the array content. 
