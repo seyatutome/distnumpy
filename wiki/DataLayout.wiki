@@ -1,4 +1,5 @@
 #summary How arrays are distributed between processes.
+#labels Phase-Implementation,Phase-Design
 
 <h1> Introduction </h1>
 
