@@ -1,4 +1,5 @@
 #summary Supported NumPy API
+#labels Featured
 
 
 = Fully supported Distributed Arrays API in NumPy =
