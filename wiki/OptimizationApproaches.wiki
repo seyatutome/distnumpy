@@ -1,6 +1,11 @@
 #summary Approaches for optimizing the code.
 #labels Phase-Design
 
+= Approach hierarchy =
+
+
+
+
 = Data structure =
 
 == Reusing PyArray objects ==
@@ -14,6 +19,7 @@ Some performance benchmark when running on a single CPU-core:
 ||apply     ||2691679 us||   2695546 us||3867 us||
 ||admin     ||0188107 us||   0187202 us||0905 us||
 ||total time||2882621 us||   2886470 us||3849 us||
+
 
 
 = Communication =
