@@ -1,9 +1,24 @@
 #summary Approaches for optimizing the code.
 #labels Phase-Design
 
-= Approach hierarchy =
+= Optimization hierarchy =
+The performance impact when optimizing a NumPy computation in the general case is very limited. It is far easier to optimize and make computation shortcuts if we have some predefined assumptions.
 
+We therefore introduce a hierarchy of implementations all optimized for specific computation scenarios. When applying a NumPy computation, a search through the hierarchy will determent the must optimized implementation for that particular computation.
 
+== Universal function ==
+
+<ol>
+<li>The ufunc apply an operation on a number of arrays element-wise and it is therefore possible to use a very simple computation method if all arrays have identical shape and are not sub-array views. In this case, it is a simple matter of applying the operation individually by all MPI-processes and communication is therefore not needed.
+
+</li>
+<li>Communication between MPI-processes is required if we allow arrays to have different shapes. Instead of working (communicating and computing) on one array-element at a time, the overhead can be reduced by blocking array-elements together. It becomes very complicated and will require a significant administration overhead if blocking is performed on arbitrary views. The problem is the data distribution scheme ([DataLayout N-Dimensional Block Cyclic Distribution]) combined with views that contains multiple steps. It becomes hard for a MPI-process to determent which part of its local data the view defines. By only allow views with 1-length steps, we have implemented a very efficient blocked universal function.
+
+</li>
+<li>Finally, if anything else fails, a non-optimized implementation that supports all NumPy operations with arbitrary views is used.
+
+</li>
+</ol>
 
 
 = Data structure =
