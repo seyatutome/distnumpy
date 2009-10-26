@@ -7,23 +7,24 @@
 == C API ==
 ||PyUFunc_GenericFunction||
 ||PyUFunc_Reduce||
-||PyArray_Flatten (returns a non-distributed arrat)||
-||PyArray_Ravel (returns a non-distributed arrat)||
+||PyArray_Flatten (returns a non-distributed array)||
+||PyArray_Ravel (returns a non-distributed array)||
 ||PyArray_NewCopy||
 ||PyArray_Empty||
 ||PyArray_Zeros||
-
+||PyArray_Diagonal (Only complete views and axises must be default)||
 
 
 == Python API ==
 ||array||
 ||empty||
 ||zeros||
-||ufunc||
-||ufunc.reduce (Only view covering the whole distributed array is supported)||
+||[http://docs.scipy.org/doc/numpy/reference/ufuncs.html ufunc]||
+||[http://docs.scipy.org/doc/numpy/reference/generated/numpy.ufunc.reduce.html ufunc.reduce] (Only complete views)||
 ||print||
 ||ravel (returns a non-distributed array)||
 ||flatten (returns a non-distributed array)||
+||diagonal (Only complete views and axises must be default)||
 
 
 = NumPy API not supported =
