@@ -7,10 +7,22 @@ Beside the requirements described in `INSTALL.txt`, you need a working MPI-2 ins
 
 All MPI-2 implementations should work but there is an issue with OpenMPI (issue 1). At the moment we therefore recommend MPICH2, which is available [http://www.mcs.anl.gov/research/projects/mpich2/ her].
 
-== Installation ==
+== Generic Installation  ==
 
 To install DistNumPy run the following command:
 
-`CC="mpicc" python dnumpy/setup.py install --prefix /you/dir/`
+`CC="mpicc" python setup.py install --prefix /your/dir/`
 
-And then make sure that `/you/dir/` is in your `$PYTHONPATH`.
+And then make sure that `/your/dir/` is in your `$PYTHONPATH`.
+
+
+=== Blue Gene/P (surveyor.alcf.anl.gov) ===
+To install DistNumPy run the following command:
+
+
+
+`CC="/bgsys/drivers/ppcfloor/comm/bin/mpicc -fno-strict-aliasing " /bgsys/drivers/ppcfloor/gnu-linux/bin/python setup.py install --prefix /your/dir/`
+
+And then submit like:
+
+`qsub -n 2 -t 30 --mode smp --env PYTHONPATH=/your/dir/ /bgsys/drivers/ppcfloor/gnu-linux/bin/python your_program.py`
