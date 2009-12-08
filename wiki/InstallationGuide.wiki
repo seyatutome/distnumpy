@@ -5,7 +5,9 @@
 
 Beside the requirements described in `INSTALL.txt`, you need a working MPI-2 installation and the MPI-2 installation must expose `mpicc` in `$PATH`.
 
-All MPI-2 implementations should work but there is an issue with OpenMPI (issue 1). At the moment we therefore recommend MPICH2, which is available [http://www.mcs.anl.gov/research/projects/mpich2/ her].
+All MPI-2 implementations should work but there is an issue with OpenMPI (issue 1). At the moment we therefore recommend MPICH2, which is available [http://www.mcs.anl.gov/research/projects/mpich2/ her]. 
+Note if using MPICH2 it should be compiled with "-fPIC".
+
 
 == Generic Installation  ==
 
