@@ -407,7 +407,7 @@ Performance measurements show an 88\% CPU utilization on an 64 CPU-cores cluster
 % number - used to balance the columns on the last page
 % adjust value as needed - may need to be readjusted if
 % the document is modified later
-%\IEEEtriggeratref{8}
+\IEEEtriggeratref{8}
 % The "triggered" command can be changed if desired:
 %\IEEEtriggercmd{\enlargethispage{-5in}}
 
@@ -624,6 +624,7 @@ Our experiments consist of a speedup benchmark which we define as a comparison b
 %We define a strong-scale benchmark as a comparison between a sequential execution with NumPy and a parallelized execution with DistNumPy where the input size is fixed. We define a weak-scale benchmark similar but with an input that scales linearly with the number of CPU-cores.
 
 \begin{table}
+\caption{Hardware specifications}
 \centering
 \begin{tabular}{|lll|}
 \hline
@@ -635,7 +636,7 @@ Memory per node & 8 GB @ 6.5 GB/s & 24 GB @ 25.6 GB/s\\
 Network & Gigabit Ethernet & Gigabit Ethernet\\
 \hline
 \end{tabular}
-\caption{Hardware specifications}
+
 \label{tab:specs}
 \end{table}
 %Core 2 Quad: http://ark.intel.com/Product.aspx?id=35365
@@ -650,10 +651,10 @@ The result of the speedup benchmark is illustrated in figure \ref{fig:MonteCarlo
 
 \begin{figure*}%
   \begin{center}%
-    \subfloat[\label{fig:MonteCarloStrong}]{\includegraphics[width=200px]{gfx/benchmarks/MonteCarloStrong}}
+    \subfloat[\label{fig:MonteCarloStrong}]{\includegraphics[width=200px]{gfx/MonteCarloStrong}}
     \qquad
-    \subfloat[\label{fig:MonteCarloStrongZoomed}]{\includegraphics[width=200px]{gfx/benchmarks/MonteCarloStrongZoomed}}
-    \caption{Speedup of the Monte Carlo simulation. The right graph is a zoomed in version of the left graph.}%
+    \subfloat[\label{fig:MonteCarloStrongZoomed}]{\includegraphics[width=200px]{gfx/MonteCarloStrongZoomed}}
+    \caption{Speedup graph of the Monte Carlo simulation. Beside having different scale, the (b) graph only goes to 8 CPU-cores whereas (a) goes to 64 CPU-cores, the two graphs are identical.}%
     \label{fig:MonteCarlo}%
   \end{center}
 \end{figure*}
@@ -668,9 +669,9 @@ The result of the speedup benchmark is illustrated in figure \ref{fig:JacobiScal
 
 \begin{figure*}%
   \begin{center}%
-    \subfloat[\label{fig:JacobiStrong}]{\includegraphics[width=200px]{gfx/benchmarks/JacobiStrong}}
+    \subfloat[\label{fig:JacobiStrong}]{\includegraphics[width=200px]{gfx/JacobiStrong}}
     \qquad
-    \subfloat[\label{fig:JacobiStrongZoomed}]{\includegraphics[width=200px]{gfx/benchmarks/JacobiStrongZoomed}}
+    \subfloat[\label{fig:JacobiStrongZoomed}]{\includegraphics[width=200px]{gfx/JacobiStrongZoomed}}
     \caption{Speedup of the Jacobi solver. The right graph is a zoomed in version of the left graph.}%
     \label{fig:JacobiScale}%
   \end{center}
@@ -682,9 +683,9 @@ The result of the speedup benchmark is illustrated in figure \ref{fig:NbodyScale
 
 \begin{figure*}%
   \begin{center}%
-    \subfloat[\label{fig:NbodyStrong}]{\includegraphics[width=200px]{gfx/benchmarks/NbodyStrong}}
+    \subfloat[\label{fig:NbodyStrong}]{\includegraphics[width=200px]{gfx/NbodyStrong}}
     \qquad
-    \subfloat[\label{fig:NbodyStrongZoomed}]{\includegraphics[width=200px]{gfx/benchmarks/NbodyStrongZoomed}}
+    \subfloat[\label{fig:NbodyStrongZoomed}]{\includegraphics[width=200px]{gfx/NbodyStrongZoomed}}
     \caption{Speedup of Newtonian N-body simulation. The right graph is a zoomed in version of the left graph.}%
     \label{fig:NbodyScale}%
   \end{center}
@@ -709,12 +710,12 @@ In this work we have successfully shown that it is possible to implement a paral
 Performance measurements of three Python program, which make use of DistNumPy, shows very good performance and scalability. A CPU utilization of 88\% is achieved on an 64 CPU-cores Nehalem cluster running a CPU-intensive Monte Carlo simulation. A more memory-intensive N-body simulation achieves a CPU utilization of 91\% on 16 CPU-cores but only 63\% on 64 CPU-cores. We therefore conclude that further work is needed if shared memory machines are to be fully utilized.
 
 
-\section*{Acknowledgements}
+%\section*{Acknowledgements}
 
 
 
 \bibliographystyle{IEEEtran}
-\bibliography{/home/madsbk/repos/priv/diku/phd/paper_archive/main}
+\bibliography{main}
 
 
 \end{document}
