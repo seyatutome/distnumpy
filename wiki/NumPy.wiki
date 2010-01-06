@@ -1,4 +1,4 @@
-#summary Scientific module for [http://www.python.org/ Python].
+#summary Scientific module for Python.
 
 NumPy (http://numpy.scipy.org/) is the fundamental package needed for scientific computing with Python. It contains among other things:
 
