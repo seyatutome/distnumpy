@@ -1,4 +1,9 @@
-\documentclass[conference]{IEEEtran}
+%\documentclass[conference]{IEEEtran}
+\documentclass[10pt]{article}
+
+\usepackage{setspace}
+%\doublespacing
+
 % Add the compsoc option for Computer Society conferences.
 %
 % If IEEEtran.cls has not been installed into the LaTeX system files,
@@ -46,14 +51,14 @@
 
 % *** GRAPHICS RELATED PACKAGES ***
 %
-\ifCLASSINFOpdf
-   \usepackage[pdftex]{graphicx}
+%\ifCLASSINFOpdf
+%   \usepackage[pdftex]{graphicx}
   % declare the path(s) where your graphic files are
   % \graphicspath{{../pdf/}{../jpeg/}}
   % and their extensions so you won't have to specify these with
   % every instance of \includegraphics
-   \DeclareGraphicsExtensions{.pdf,.jpeg,.png}
-\else
+%   \DeclareGraphicsExtensions{.pdf,.jpeg,.png}
+%\else
   % or other class option (dvipsone, dvipdf, if not using dvips). graphicx
   % will default to the driver specified in the system graphics.cfg if no
   % driver is specified.
@@ -63,7 +68,7 @@
   % and their extensions so you won't have to specify these with
   % every instance of \includegraphics
    \DeclareGraphicsExtensions{.eps, .ps}
-\fi
+%\fi
 % graphicx was written by David Carlisle and Sebastian Rahtz. It is
 % required if you want graphics, photos, etc. graphicx.sty is already
 % installed on most LaTeX systems. The latest version and documentation can
@@ -169,7 +174,8 @@
 % IEEEtran.cls handing of captions. Version 1.3 (2005/06/28) and later 
 % (recommended due to many improvements over 1.2) of subfig.sty supports
 % the caption=false option directly:
-\usepackage[caption=false,font=footnotesize]{subfig}
+%\usepackage[caption=false,font=footnotesize]{subfig}
+\usepackage{subfig}
 %
 % The latest version and documentation can be obtained at:
 % http://www.ctan.org/tex-archive/macros/latex/contrib/subfig/
@@ -245,27 +251,28 @@ numbers=left, numberstyle=\ttfamily\bfseries\footnotesize
 }
 
 % correct bad hyphenation here
-\hyphenation{Dist-Num-Py}
+\hyphenation{Dist-Num-Py Glo-bal}
 
 
 \begin{document}
 %
 % paper title
 % can use linebreaks \\ within to get better formatting as desired
-\title{Distributed memory version of NumPy}
+\title{Numerical Python for Scalable Architectures}
+\author{}
 
 % author names and affiliations
 % use a multiple column layout for up to three different
 % affiliations
-\author{\IEEEauthorblockN{Mads Ruben Burgdorff Kristensen}
-\IEEEauthorblockA{eScience Centre\\
-University of Copenhagen\\
-Denmark}
-\and
-\IEEEauthorblockN{Brian Vinter}
-\IEEEauthorblockA{eScience Centre\\
-University of Copenhagen\\
-Denmark}}
+%\author{\IEEEauthorblockN{Mads Ruben Burgdorff Kristensen}
+%\IEEEauthorblockA{eScience Centre\\
+%University of Copenhagen\\
+%Denmark}
+%\and
+%\IEEEauthorblockN{Brian Vinter}
+%\IEEEauthorblockA{eScience Centre\\
+%University of Copenhagen\\
+%Denmark}}
 
 % conference papers do not typically use \thanks and this command
 % is locked out in conference mode. If really needed, such as for
@@ -318,7 +325,7 @@ Performance measurements show an 88\% CPU utilization on an 64 CPU-cores cluster
 %
 % For peerreview papers, this IEEEtran command inserts a page break and
 % creates the second title. It will be ignored for other modes.
-\IEEEpeerreviewmaketitle
+%\IEEEpeerreviewmaketitle
 
 % An example of a floating figure using the graphicx package.
 % Note that \label must occur AFTER (or within) \caption.
@@ -407,7 +414,7 @@ Performance measurements show an 88\% CPU utilization on an 64 CPU-cores cluster
 % number - used to balance the columns on the last page
 % adjust value as needed - may need to be readjusted if
 % the document is modified later
-\IEEEtriggeratref{8}
+%\IEEEtriggeratref{8}
 % The "triggered" command can be changed if desired:
 %\IEEEtriggercmd{\enlargethispage{-5in}}
 
@@ -443,7 +450,7 @@ To some degree NumPy supports parallelization but only in a shared memory enviro
 
 
 \section{Target architectures}
-NumPy supports a long range of architectures from the widespread x86 to the specialized Blue Gene architecture. However, NumPy is incapable of utilizing distributed memory architectures like Blue Gene supercomputers or clusters of x86 machines. The target of DistNumPy is to close this gap and fully support and utilizing distributed memory architectures. 
+NumPy supports a long range of architectures from the widespread x86 to the specialized Blue Gene architecture. However, NumPy is incapable of utilizing distributed memory architectures like Blue Gene supercomputers or clusters of x86 machines. The target of DistNumPy is to close this gap and fully support and utilize distributed memory architectures. 
 
 
 \section{Related work}
@@ -459,12 +466,13 @@ An even higher level of abstraction is found in projects where the execution, se
 
 The Simple Parallel R INTerface (SPRINT)\cite{Hill08} is a parallel framework for the programming language R. The abstraction level in SPRINT is identical with DistNumPy in the sense that the distribution and parallelization is completely transparent to the user.
 
-
 \section{NumPy}
 Python has become a popular language for high performance computing even though the computational performance of Python is insufficient. This is because Python is used as the coordinating language for computational intensive tasks, which are then implemented in a high performance language.
 
 NumPy\cite{NumPy} is a computation library for Python implemented in the language C. NumPy introduces an N-dimensional array object with a whole range of supported functions. By using these operations NumPy takes advantage of the performance of C while retaining the high abstraction level of Python.
 
+\subsection{Interfaces}
+The primary NumPy interface is a Python interface and it is possible to use NumPy exclusively from Python. However, NumPy also have a C interface, in which it is possible to access the same functionality as in the Python interface. The C interface also makes it possible to access low level data structures like pointers to array data and thereby making it possible to implement arbitrary array operations efficiently in C. The two interfaces can be used interchangeable through the Python program.
 
 \subsection{Universal functions}
 An important mechanism in NumPy is a concept called “Universal function”. A universal function (ufunc) is a function that operates on arrays in an element-by-element fashion. That is, a ufunc is a “vectorized” wrapper for a function that takes a fixed number of scalar inputs and produces a fixed number of scalar outputs. Using ufunc can give a significant performance boost compared to native Python because the computation-loop is executed in C.
@@ -488,6 +496,10 @@ A = numpy.array([1,2,3])#Non-Distributed
 B = numpy.array([1,2,3], dist=True)#Distributed
 \end{lstlisting}
 \lstset{frame=single, xleftmargin=5mm, numbers=left}
+
+
+\subsection{Interfaces}
+Our primary goal in DistNumPy is to support NumPy's Python interface completely. A great subset of NumPy's C interface is also supported in DistNumPy. However, the part of the C interface that involves direct access to low level data structures is not supported. The reason being that it is not feasible to return a pointer to a continuous memory block that represent the elements in a distributed array.
 
 
 \subsection{Operation dispatching}
@@ -529,7 +541,7 @@ Array-views are not allowed to refer to each other, which mean that the hierarch
 \begin{figure}
  \centering
  \includegraphics[width=150px]{gfx/views}
- \caption{Reference hierarchy between the three array data structures. The main memory is in the bottom, array-bases is in the middle and array-view is in the top.}
+ \caption{Reference hierarchy between the two array data structures and the main memory. The main memory is in the bottom, array-bases is in the middle and array-view is in the top.}
  \label{fig:views}
 \end{figure}
 
@@ -539,8 +551,8 @@ The performance impact when optimizing a NumPy operation in the general case is 
 Most simplifications are related to the use of partial views, which are array-views that represents a sub-part of the underlying array-base. It is much simpler to handle array-views that represent the whole array-base 1-to-1 rather than handle arbitrary array-views. For instance, blocking communication together in large MPI-messages becomes difficult and introduces a significant overhead when using non-continuously array-views. The problem is the data distribution scheme (N-Dimensional Block Cyclic Distribution). It becomes hard for an MPI-process to determine which part of its local data the array-view covers. By introducing a simplified scenario that only includes continuously array-views we have implemented a very efficient blocked universal function.
 
 
-\subsection{Distributed BLAS}
-As previously mentioned NumPy supports BLAS operations on vectors and matrices. DistNumPy therefore implements a distributed version of BLAS inspired by PBLAS from the ScaLAPACK library. Since DistNumPy uses the same data-layout as ScaLAPACK, it would be straightforward to use PBLAS for all distributed BLAS operations. However to simplify the installation and maintenance of DistNumPy we have chosen to implement our own distributed version of BLAS. Like PBLAS, we use SUMMA\cite{SUMMA_GeijnW97} for matrix multiplication, which enable us to use the, already available, BLAS library locally on the MPI-processes. Using SUMMA is only applicable on non-partial array-views and we therefore use a straightforward implementation that computes one element at a time if partial array-views are involved in the computation. 
+\subsection{Parallel BLAS}
+As previously mentioned NumPy supports BLAS operations on vectors and matrices. DistNumPy therefore implements a parallel version of BLAS inspired by PBLAS from the ScaLAPACK library. Since DistNumPy uses the same data-layout as ScaLAPACK, it would be straightforward to use PBLAS for all parallel BLAS operations. However, to simplify the installation and maintenance of DistNumPy we have chosen to implement our own parallel version of BLAS. Like PBLAS, we use SUMMA\cite{SUMMA_GeijnW97} for matrix multiplication, which enable us to use the, already available, BLAS library locally on the MPI-processes. Using SUMMA is only applicable on non-partial array-views and we therefore use a straightforward implementation that computes one element at a time if partial array-views are involved in the computation. 
 
 \subsection{Universal function}
 In DistNumPy, the implementation of ufunc uses three different scenarios.
@@ -552,7 +564,7 @@ In DistNumPy, the implementation of ufunc uses three different scenarios.
 
 
 \section{Examples}
-To evaluate DistNumPy we have implemented three Python programs that all make use of NumPy’s vector-operations (ufunc). They are all optimized for a sequential execution on a single CPU and the only program change we make, when going from the original NumPy to our DistNumPy, is the array creation argument \texttt{dist}. 
+To evaluate DistNumPy we have implemented three Python programs that all make use of NumPy's vector-operations (ufunc). They are all optimized for a sequential execution on a single CPU and the only program change we make, when going from the original NumPy to our DistNumPy, is the array creation argument \texttt{dist}. 
 A walk-through of a Monte Carlo simulation is presented as an example of how DistNumPy handles Python executions.
 
 
@@ -571,7 +583,7 @@ print add.reduce(z) * 4.0 / S #The result
  \label{lst:montecarlo}
 \end{figure}
 
-We have implemented an efficient Monte Carlo Pi simulation using NumPy’s ufunc. The implementation is a translation of the Monte Carlo simulation in Java benchmark SciMark 2.0\cite{SciMark}. It is very simple and uses two vectors with length equal the number of samples used in the calculation. Because of the memory requirements, this drastically reduces maximum number of samples. Combining multiple simulations will allow more samples but we will only use one simulation. The implementation is included in its full length (Fig. \ref{lst:montecarlo}) and the following is an walk-through of a simulation (the bullet-numbers represents line numbers):
+We have implemented an efficient Monte Carlo Pi simulation using NumPy's ufunc. The implementation is a translation of the Monte Carlo simulation included in the benchmark suite SciMark 2.0\cite{SciMark}, which is written in Java. It is very simple and uses two vectors with length equal the number of samples used in the calculation. Because of the memory requirements, this drastically reduces maximum number of samples. Combining multiple simulations will allow more samples but we will only use one simulation. The implementation is included in its full length (Fig. \ref{lst:montecarlo}) and the following is a walkthrough of a simulation (the bullet-numbers represents line numbers):
 
 \begin{enumerate}
 \item[\textbf{1:}] All MPI-processes interprets the \texttt{import} statement and initiate DistNumPy. Beside calling \texttt{MPI\_Init()} the initialization is identical with the original NumPy but instead of returning from the import statement, the slaves, MPI-processes with rank greater than zero, listen for a command messages from the master, the MPI-process with rank zero.
@@ -651,9 +663,9 @@ The result of the speedup benchmark is illustrated in figure \ref{fig:MonteCarlo
 
 \begin{figure*}%
   \begin{center}%
-    \subfloat[\label{fig:MonteCarloStrong}]{\includegraphics[width=200px]{gfx/MonteCarloStrong}}
-    \qquad
-    \subfloat[\label{fig:MonteCarloStrongZoomed}]{\includegraphics[width=200px]{gfx/MonteCarloStrongZoomed}}
+    \subfloat[\label{fig:MonteCarloStrong}]{\includegraphics[width=170px]{gfx/MonteCarloStrong}}
+%    \qquad
+    \subfloat[\label{fig:MonteCarloStrongZoomed}]{\includegraphics[width=170px]{gfx/MonteCarloStrongZoomed}}
     \caption{Speedup graph of the Monte Carlo simulation. Beside having different scale, the (b) graph only goes to 8 CPU-cores whereas (a) goes to 64 CPU-cores, the two graphs are identical.}%
     \label{fig:MonteCarlo}%
   \end{center}
@@ -669,10 +681,10 @@ The result of the speedup benchmark is illustrated in figure \ref{fig:JacobiScal
 
 \begin{figure*}%
   \begin{center}%
-    \subfloat[\label{fig:JacobiStrong}]{\includegraphics[width=200px]{gfx/JacobiStrong}}
-    \qquad
-    \subfloat[\label{fig:JacobiStrongZoomed}]{\includegraphics[width=200px]{gfx/JacobiStrongZoomed}}
-    \caption{Speedup of the Jacobi solver. The right graph is a zoomed in version of the left graph.}%
+    \subfloat[\label{fig:JacobiStrong}]{\includegraphics[width=170px]{gfx/JacobiStrong}}
+%    \qquad
+    \subfloat[\label{fig:JacobiStrongZoomed}]{\includegraphics[width=170px]{gfx/JacobiStrongZoomed}}
+    \caption{Speedup of the Jacobi solver. Beside having different scale, the (b) graph only goes to 8 CPU-cores whereas (a) goes to 64 CPU-cores, the two graphs are identical.}%
     \label{fig:JacobiScale}%
   \end{center}
 \end{figure*}
@@ -683,10 +695,10 @@ The result of the speedup benchmark is illustrated in figure \ref{fig:NbodyScale
 
 \begin{figure*}%
   \begin{center}%
-    \subfloat[\label{fig:NbodyStrong}]{\includegraphics[width=200px]{gfx/NbodyStrong}}
-    \qquad
-    \subfloat[\label{fig:NbodyStrongZoomed}]{\includegraphics[width=200px]{gfx/NbodyStrongZoomed}}
-    \caption{Speedup of Newtonian N-body simulation. The right graph is a zoomed in version of the left graph.}%
+    \subfloat[\label{fig:NbodyStrong}]{\includegraphics[width=170px]{gfx/NbodyStrong}}
+%    \qquad
+    \subfloat[\label{fig:NbodyStrongZoomed}]{\includegraphics[width=170px]{gfx/NbodyStrongZoomed}}
+    \caption{Speedup of Newtonian N-body simulation. Beside having different scale, the (b) graph only goes to 8 CPU-cores whereas (a) goes to 64 CPU-cores, the two graphs are identical.}%
     \label{fig:NbodyScale}%
   \end{center}
 \end{figure*}
@@ -699,9 +711,9 @@ The scalability of the Jacobi and the N-body computation is drastically reduced 
 
 
 \section{Future work}
-In its current state DistNumPy does not implement the NumPy API completely. Many specialized operations like Fast Fourier transform or LU factorization is not implemented, but it is our intention to implement the complete NumPy API overtime.
+In its current state DistNumPy does not implement the NumPy interface completely. Many specialized operations like Fast Fourier transform or LU factorization is not implemented, but it is our intention to implement the complete Python interface and most of the C interface.
 
-Another important future work is improvement of performance and scalability. As showed by the benchmarks, applications that are dominated by non-complex ufuncs easily becomes memory bounded. One solutions it to block ufuncs, that operates on common arrays, together in one joint operation and thereby making the joint operation more CPU-intensive. If it is possible to join enough ufuncs together the application may become CPU bound rather than memory bound.
+Another important future work is performance and scalability improvement. As showed by the benchmarks, applications that are dominated by non-complex ufuncs easily becomes memory bounded. One solutions it to block ufuncs, that operates on common arrays, together in one joint operation and thereby making the joint operation more CPU-intensive. If it is possible to join enough ufuncs together the application may become CPU bound rather than memory bound.
 
 
 \section{Conclusions}
