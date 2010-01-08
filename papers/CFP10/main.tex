@@ -303,7 +303,10 @@ numbers=left, numberstyle=\ttfamily\bfseries\footnotesize
 \maketitle
 
 \begin{abstract}
-In this paper, we introduce DistNumPy, a library for doing numerical computation in Python that target Scalable, distributed memory, architectures. DistNumPy extends the NumPy-module\cite{numpy}, which is popular for scientific programming. Replacing NumPy with DistNumPy makes it possible to write sequential Python programs that then seamlessly utilize distributed memory architectures. This feature is obtained by introducing a new backend for NumPy-arrays which distribute allocated data amongst the nodes in a distributed memory multi-processor. All operations with this new array-backend will seek to utilize all available processors and the array itself is distributed between multiple processors in order to support larger arrays than a single node can hold in memory. Experiments of sequential Python programs on a 64 CPU-cores ethernet-based cluster of SMP-nodes demonstrates an 88\% CPU utilization when running a Monte Carlo simulation and a 63\% CPU utilization on a N-body simulation and a more modest 50\% on a Jacobi solver, the primary limitation in processor utilization is identified as SMP limitations and not the distributed aspects. We therefore conclude that it is possible to obtain significant speedup from using our new array-backend without changing the original Python code.
+In this paper, we introduce DistNumPy, a library for doing numerical computation in Python that target scalable distributed memory architectures. DistNumPy extends the NumPy module\cite{numpy}, which is popular for scientific programming. Replacing NumPy with DistNumPy enables the user to write sequential Python programs that seamlessly utilize distributed memory architectures. This feature is obtained by introducing a new backend for NumPy arrays, which distribute data amongst the nodes in a distributed memory multi-processor. All operations on this new array will seek to utilize all available processors. The array itself is distributed between multiple processors in order to support larger arrays than a single node can hold in memory. 
+
+We perform three experiments of sequential Python programs running on an Ethernet based cluster of SMP-nodes with a total of 64 CPU-cores. The results show an 88\% CPU utilization when running a Monte Carlo simulation, 63\% CPU utilization on an N-body simulation and a more modest 50\% on a Jacobi solver. The primary limitation in processor utilization is identified as SMP limitations and not the distributed aspects. Based on the experiments we find that it is possible to obtain significant speedup from using our new array-backend without changing the original Python code.
+
 
 %[1] Travis E. Oliphant, "Python for Scientific Computing," Computing in Science & Engineering, vol. 9, no. 3, May/June 2007, pp. 10-20.
 \end{abstract}
@@ -542,7 +545,7 @@ Array-views are not allowed to refer to each other, which mean that the hierarch
 \begin{figure}
  \centering
  \includegraphics[width=250px]{gfx/views}
- \caption{Reference hierarchy between the two array data structures and the main memory.The main memory is in the bottom, array-bases is in the middle and array-view is in the top. Note that }
+ \caption{Reference hierarchy between the two array data structures and the main memory. The main memory is in the bottom, array-bases is in the middle and array-view is in the top.}
  \label{fig:views}
 \end{figure}
 
