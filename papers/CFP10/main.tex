@@ -514,20 +514,17 @@ The following describes the flow of the dispatching:
 \item The master is the dispatcher and will, when the user applies a python command on a distributed array, compose a message with meta-data describing the command. 
 \item The message is then broadcast from the master to the slaves with a blocking MPI-broadcast. It is important to note that the message only consist of meta-data and not any actual array data.
 \item After the broadcast, all MPI-processes will apply the command on the sub-array they own and exchange array elements as required (Point-to-Point communication).
-\item When the command is applyed, the slaves will wait for the next command from the master and the master will return to the user's python program. The master will return even though some slaves may still be working on the command, synchronization is therefore required before the next command broadcast.
+\item When the command is applied, the slaves will wait for the next command from the master and the master will return to the user's python program. The master will return even though some slaves may still be working on the command, synchronization is therefore required before the next command broadcast.
 \end{enumerate}
 
 
-\subsection{Data layout}
-\begin{figure}%
-  \begin{center}%
-    \subfloat[\label{fig:datalayoutA}]{\includegraphics[width=130px]{gfx/datalayout_global}}
-    \qquad
-    \subfloat[\label{fig:datalayoutB}]{\includegraphics[width=130px]{gfx/datalayout_local}}
-    \caption{Two-Dimensional Block Cyclic Distribution. A matrix with 12 x 12 blocks is distributed over a 2 x 3 processor grid. (a) The shaded and unshaded areas represent different grids. (b) It is easier to see the distribution from the processor point-of-view. Each processor has 6 x 4 blocks.}%
-    \label{fig:datalayout}%
-  \end{center}
+\begin{figure}
+ \centering
+ \includegraphics[width=280px]{gfx/datalayout}
+ \caption{The Two-Dimensional Block Cyclic Distribution of a matrix on a 2 x 3 grid of processors.}
+ \label{fig:datalayout}
 \end{figure}
+
 
 Two-Dimensional Block Cyclic Distribution is a very popular distribution scheme and it is used in numerical libraries like ScaLAPACK\cite{Blackford96} and LINPACK\cite{linpack79}. It supports matrices and vectors and has a good load balance in numerical problems like Gaussian elimination that have a diagonal workflow. The distribution scheme works by arranging all MPI-processes in a two dimensional grid and then distributes data-blocks in a round-robin fashion either along one or both grid dimensions (Figure \ref {fig:datalayout}); the result is a well-balanced distribution.
 
@@ -629,7 +626,7 @@ Our implementation uses ufunc operations in a while-loop until it converges. Mos
 %\end{enumerate}
 
 \subsection{Newtonian N-body simulation}
-An Newtonian N-body simulation is one that studies how bodies, represented by a mass, a location, and a velocity, move in space according to the laws of Newtonian physics. We use a straightforward algorithm computing all body-body interactions. The NumPy implementation is a direct translation of a Matlab program\cite{assignmentNbody}. The implementation is too big to include in this paper, but the implementation is straightforward and use universal functions and matrix multiplications.
+A Newtonian N-body simulation is one that studies how bodies, represented by a mass, a location, and a velocity, move in space according to the laws of Newtonian physics. We use a straightforward algorithm computing all body-body interactions. The NumPy implementation is a direct translation of a Matlab program\cite{assignmentNbody}. The working loop of the two implementations take up 19 lines in Python and 22 lines in Matlab thus it is too big to include here. However, the implementation is straightforward and use universal functions and matrix multiplications.
 
 
 \section{Experiments}
