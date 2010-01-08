@@ -303,11 +303,12 @@ numbers=left, numberstyle=\ttfamily\bfseries\footnotesize
 \maketitle
 
 \begin{abstract}
-In this work, we introduce DistNumPy, which is a library for doing numerical computation in Python that targets distributed memory architectures. DistNumPy extends the popular NumPy-module to make it possible for a sequential written Python program to utilize distributed memory architectures. In order to accomplish this we introduce a new backend for NumPy-arrays. All operations with this new array-backend will utilize all available processors and the array itself is distributed between multiple processors making it possible to have larger arrays than otherwise possible.
+In this paper, we introduce DistNumPy, a library for doing numerical computation in Python that target Scalable, distributed memory, architectures. DistNumPy extends the NumPy-module\cite{numpy}, which is popular for scientific programming. Replacing NumPy with DistNumPy makes it possible to write sequential Python programs that then seamlessly utilize distributed memory architectures. This feature is obtained by introducing a new backend for NumPy-arrays which distribute allocated data amongst the nodes in a distributed memory multi-processor. All operations with this new array-backend will seek to utilize all available processors and the array itself is distributed between multiple processors in order to support larger arrays than a single node can hold in memory. Experiments of sequential Python programs on a 64 CPU-cores ethernet-based cluster of SMP-nodes demonstrates an 88\% CPU utilization when running a Monte Carlo simulation and a 63\% CPU utilization on a N-body simulation and a more modest 50\% on a Jacobi solver, the primary limitation in processor utilization is identified as SMP limitations and not the distributed aspects. We therefore conclude that it is possible to obtain significant speedup from using our new array-backend without changing the original Python code.
 
-Performance measurements show an 88\% CPU utilization on an 64 CPU-cores cluster running a Monte Carlo simulation and 63\% CPU utilization on a N-body simulation. We therefore conclude that it is possible to obtain significant speedup when using our new array-backend without changing the original Python code.
-
+%[1] Travis E. Oliphant, "Python for Scientific Computing," Computing in Science & Engineering, vol. 9, no. 3, May/June 2007, pp. 10-20.
 \end{abstract}
+
+ 
 % IEEEtran.cls defaults to using nonbold math in the Abstract.
 % This preserves the distinction between vectors and scalars. However,
 % if the conference you are submitting to favors bold math in the abstract,
@@ -444,7 +445,7 @@ Performance measurements show an 88\% CPU utilization on an 64 CPU-cores cluster
 \section{Introduction}
 In many scientific and engineering areas, there is a need to solve numerical problems. Researchers and engineers behind these applications often prefer a very high level programming language like Python\cite{Python} or Matlab when developing new algorithms. SciPy\cite{SciPy}, which is a collection of Python modules, has become a popular numerical framework amongst researchers. It supports a broad range of very high-level computation operations and when experimenting with an application the user gets immediately feedback due to the interactive execution support in Python. 
 
-SciPy depends on the numerical computation module called NumPy\cite{NumPy}, which is the fundamental module needed for scientific computing with Python. It is mainly implemented in C and introduces a powerful N-dimensional array object that supports a broad range of numerical operations. The performance of NumPy is significantly increased by using array-operations instead of scalar-operations on the arrays.
+SciPy depends on the numerical computation module called NumPy\cite{numpy}, which is the fundamental module needed for scientific computing with Python. It is mainly implemented in C and introduces a powerful N-dimensional array object that supports a broad range of numerical operations. The performance of NumPy is significantly increased by using array-operations instead of scalar-operations on the arrays.
 
 To some degree NumPy supports parallelization but only in a shared memory environment. However, many scientific computations are computed on large distributed memory machines because of the computation and memory demand. In these cases, the communication between processes has to be implemented by the programmer manually. The result is a significant difference between the sequential program and the parallelized program. We have eliminated this difference by introducing a distributed version of the N-dimensional array object. All operations with this new array will utilize all available processors and the array itself is distributed between multiple processors making it possible to have larger arrays than otherwise possible.
 
@@ -469,7 +470,7 @@ The Simple Parallel R INTerface (SPRINT)\cite{Hill08} is a parallel framework fo
 \section{NumPy}
 Python has become a popular language for high performance computing even though the computational performance of Python is insufficient. This is because Python is used as the coordinating language for computational intensive tasks, which are then implemented in a high performance language.
 
-NumPy\cite{NumPy} is a computation library for Python implemented in the language C. NumPy introduces an N-dimensional array object with a whole range of supported functions. By using these operations NumPy takes advantage of the performance of C while retaining the high abstraction level of Python.
+NumPy\cite{numpy} is a computation library for Python implemented in the language C. NumPy introduces an N-dimensional array object with a whole range of supported functions. By using these operations NumPy takes advantage of the performance of C while retaining the high abstraction level of Python.
 
 \subsection{Interfaces}
 The primary NumPy interface is a Python interface and it is possible to use NumPy exclusively from Python. However, NumPy also have a C interface, in which it is possible to access the same functionality as in the Python interface. The C interface also makes it possible to access low level data structures like pointers to array data and thereby making it possible to implement arbitrary array operations efficiently in C. The two interfaces can be used interchangeable through the Python program.
@@ -517,9 +518,9 @@ The following describes the flow of the dispatching:
 \subsection{Data layout}
 \begin{figure}%
   \begin{center}%
-    \subfloat[\label{fig:datalayoutA}]{\includegraphics[width=110px]{gfx/datalayout_global}}
+    \subfloat[\label{fig:datalayoutA}]{\includegraphics[width=130px]{gfx/datalayout_global}}
     \qquad
-    \subfloat[\label{fig:datalayoutB}]{\includegraphics[width=110px]{gfx/datalayout_local}}
+    \subfloat[\label{fig:datalayoutB}]{\includegraphics[width=130px]{gfx/datalayout_local}}
     \caption{Two-Dimensional Block Cyclic Distribution. A matrix with 12 x 12 blocks is distributed over a 2 x 3 processor grid. (a) The shaded and unshaded areas represent different grids. (b) It is easier to see the distribution from the processor point-of-view. Each processor has 6 x 4 blocks.}%
     \label{fig:datalayout}%
   \end{center}
@@ -540,8 +541,8 @@ Array-views are not allowed to refer to each other, which mean that the hierarch
 
 \begin{figure}
  \centering
- \includegraphics[width=150px]{gfx/views}
- \caption{Reference hierarchy between the two array data structures and the main memory. The main memory is in the bottom, array-bases is in the middle and array-view is in the top.}
+ \includegraphics[width=250px]{gfx/views}
+ \caption{Reference hierarchy between the two array data structures and the main memory.The main memory is in the bottom, array-bases is in the middle and array-view is in the top. Note that }
  \label{fig:views}
 \end{figure}
 
@@ -552,12 +553,12 @@ Most simplifications are related to the use of partial views, which are array-vi
 
 
 \subsection{Parallel BLAS}
-As previously mentioned NumPy supports BLAS operations on vectors and matrices. DistNumPy therefore implements a parallel version of BLAS inspired by PBLAS from the ScaLAPACK library. Since DistNumPy uses the same data-layout as ScaLAPACK, it would be straightforward to use PBLAS for all parallel BLAS operations. However, to simplify the installation and maintenance of DistNumPy we have chosen to implement our own parallel version of BLAS. Like PBLAS, we use SUMMA\cite{SUMMA_GeijnW97} for matrix multiplication, which enable us to use the, already available, BLAS library locally on the MPI-processes. Using SUMMA is only applicable on non-partial array-views and we therefore use a straightforward implementation that computes one element at a time if partial array-views are involved in the computation. 
+As previously mentioned NumPy supports BLAS operations on vectors and matrices. DistNumPy therefore implements a parallel version of BLAS inspired by PBLAS from the ScaLAPACK library. Since DistNumPy uses the same data-layout as ScaLAPACK, it would be straightforward to use PBLAS for all parallel BLAS operations. However, to simplify the installation and maintenance of DistNumPy we have chosen to implement our own parallel version of BLAS. Like PBLAS, we use SUMMA\cite{SUMMA_GeijnW97} for matrix multiplication, which enable us to use the, already available, BLAS library locally on the MPI-processes. Using SUMMA is only applicable on complete array-views and we therefore use a straightforward implementation that computes one element at a time if partial array-views are involved in the computation. 
 
 \subsection{Universal function}
 In DistNumPy, the implementation of ufunc uses three different scenarios.
 \begin{enumerate}
-\item In the simplest scenario, applying an ufunc does not require any communication between MPI-processes. The scenario is applicable when the ufunc is applied on non-partial array-views with identical shape since we then have a perfect match between all elements in the array-views.
+\item In the simplest scenario, applying an ufunc does not require any communication between MPI-processes. The scenario is applicable when the ufunc is applied on complete array-views with identical shape since we then have a perfect match between all elements in the array-views.
 \item In the second scenario, we use blocked asynchronous communication and computation. The array-views must represent a continuously part of the underlying array-base for the scenario to be applicable. The computation is parallelized by the data distribution of the output array and data blocks from the input arrays are fetched when needed. We use non-blocking one-side communication (\texttt{MPI\_Get}) when fetching data blocks, which makes it possible to compute one block while fetching the next block.
 \item The final scenario does not use any simplifications and works with any kind of array-views. It also uses non-blocking one-side communication but only one element at a time.
 \end{enumerate}
@@ -565,7 +566,7 @@ In DistNumPy, the implementation of ufunc uses three different scenarios.
 
 \section{Examples}
 To evaluate DistNumPy we have implemented three Python programs that all make use of NumPy's vector-operations (ufunc). They are all optimized for a sequential execution on a single CPU and the only program change we make, when going from the original NumPy to our DistNumPy, is the array creation argument \texttt{dist}. 
-A walk-through of a Monte Carlo simulation is presented as an example of how DistNumPy handles Python executions.
+A walkthrough of a Monte Carlo simulation is presented as an example of how DistNumPy handles Python executions.
 
 
 \subsection{Monte Carlo simulation}
