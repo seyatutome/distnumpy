@@ -585,7 +585,7 @@ print add.reduce(z) * 4.0 / S #The result
  \label{lst:montecarlo}
 \end{figure}
 
-We have implemented an efficient Monte Carlo Pi simulation using NumPy's ufunc. The implementation is a translation of the Monte Carlo simulation included in the benchmark suite SciMark 2.0\cite{SciMark}, which is written in Java. It is very simple and uses two vectors with length equal the number of samples used in the calculation. Because of the memory requirements, this drastically reduces the \ref{}maximum number of samples. Combining multiple simulations will allow more samples but we will only use one simulation. The implementation is included in its full length (Fig. \ref{lst:montecarlo}) and the following is a walkthrough of a simulation (the bullet-numbers represents line numbers):
+We have implemented an efficient Monte Carlo Pi simulation using NumPy's ufunc. The implementation is a translation of the Monte Carlo simulation included in the benchmark suite SciMark 2.0\cite{SciMark}, which is written in Java. It is very simple and uses two vectors with length equal the number of samples used in the calculation. Because of the memory requirements, this drastically reduces the maximum number of samples. Combining multiple simulations will allow more samples but we will only use one simulation. The implementation is included in its full length (Fig. \ref{lst:montecarlo}) and the following is a walkthrough of a simulation (the bullet-numbers represents line numbers):
 
 \begin{enumerate}
 \item[\textbf{1:}] All MPI-processes interprets the \texttt{import} statement and initiate DistNumPy. Beside calling \texttt{MPI\_Init()} the initialization is identical with the original NumPy but instead of returning from the import statement, the slaves, MPI-processes with rank greater than zero, listen for a command messages from the master, the MPI-process with rank zero.
@@ -734,6 +734,7 @@ We conclude that it is possible to obtain significant speedup with DistNumPy. Ho
 
 
 %\bibliographystyle{IEEEtran}
+\bibliographystyle{plain}
 \bibliography{main}
 
 
