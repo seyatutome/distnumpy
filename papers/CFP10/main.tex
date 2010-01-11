@@ -473,7 +473,7 @@ The Simple Parallel R INTerface (SPRINT)\cite{Hill08} is a parallel framework fo
 \section{NumPy}
 Python has become a popular language for high performance computing even though the execution performance of Python programs is is much lower than that of compiled languages. The growing popularity is because Python is used as the coordinating language while the computational intensive tasks are implemented in a high performance language.
 
-NumPy\cite{numpy} is a library for numerical operations in Python which is implemented in the C programming language. NumPy provides the programmer with an N-dimensional array object and a whole range of supported functions. By using these operations NumPy takes advantage of the performance of C while retaining the high abstraction level of Python.
+NumPy\cite{numpy} is a library for numerical operations in Python which is implemented in the C programming language. NumPy provides the programmer with an N-dimensional array object and a whole range of supported operations. By using these operations NumPy takes advantage of the performance of C while retaining the high abstraction level of Python. However, this also means that no performance advantage is obtained if the user does not make use of the array operations in NumPy e.g. if using a normal Python loop to traverse a NumPy array.
 
 \subsection{Interfaces}
 The primary NumPy interface is a Python interface and it is possible to use NumPy exclusively from Python. However, NumPy also have a C interface, in which it is possible to access the same functionality as in the Python interface. The C interface also makes it possible to access low level data structures like pointers to array data and thereby making it possible to implement arbitrary array operations efficiently in C. The two interfaces can be used interchangeable through the Python program.
@@ -491,7 +491,7 @@ NumPy make use of the numerical library Basic Linear Algebra Subprograms (BLAS) 
 
 
 \section{DistNumPy}
-DistNumPy\cite{distnumpy09} is a new version of NumPy that can use multiple processors through the communication library Message Passing Interface (MPI)\cite{mpi}. The main idea is to parallelize array operations in a manner completely transparent to the user - from the perspective of the user, the difference between NumPy and DistNumPy should be minimal. We have therefore chosen not to follow the standard MPI approach in which the user-program is executed on all MPI-processes and it is left to the user to differentiate between the MPI-processes, e.g. sequential areas in the user-program must be guarded with a branch based on the process' MPI-rank. In DistNumPy MPI communication must be full transparent and the user need no knowledge in MPI or any parallel program model.
+DistNumPy\cite{distnumpy09} is a new version of NumPy that can use multiple processors through the communication library Message Passing Interface (MPI)\cite{mpi}. The main idea is to parallelize array operations in a manner completely transparent to the user - from the perspective of the user, the difference between NumPy and DistNumPy should be minimal. We have therefore chosen not to follow the standard MPI approach in which the user-program is executed on all MPI-processes and it is left to the user to differentiate between the MPI-processes, e.g. sequential areas in the user-program must be guarded with a branch based on the process' MPI-rank. In DistNumPy MPI communication must be full transparent and the user need no knowledge in MPI or any parallel program model. However, the user still needs to use the array operations in NumPy to obtain any kind of speedup.
 
 The only difference between the API of NumPy and DistNumPy is in the array creation routines. Since we allow distributed and non-distributed arrays to co-exist, the user can specify, as an optional parameter, if the array should be distributed. The following illustrates the only difference between the creation of a standard array and a distributed array:
 \lstset{frame=none, xleftmargin=0mm, numbers=none}
@@ -717,10 +717,15 @@ In its current state DistNumPy does not implement the NumPy interface completely
 Another important future work is performance and scalability improvement. As showed by the benchmarks, applications that are dominated by non-complex ufuncs easily becomes memory bounded. One solutions it to block ufuncs, that operates on common arrays, together in one joint operation and thereby making the joint operation more CPU-intensive. If it is possible to join enough ufuncs together the application may become CPU bound rather than memory bound.
 
 
-\section{Conclusions}
-In this work we have successfully shown that it is possible to implement a parallelized version of NumPy in a fully transparent manner. The developed implementation, DistNumPy, supports distributed memory environments, using MPI, completely transparent to the user.
 
-Performance measurements of three Python program, which make use of DistNumPy, shows very good performance and scalability. A CPU utilization of 88\% is achieved on an 64 CPU-cores Nehalem cluster running a CPU-intensive Monte Carlo simulation. A more memory-intensive N-body simulation achieves a CPU utilization of 91\% on 16 CPU-cores but only 63\% on 64 CPU-cores. We therefore conclude that further work is needed if shared memory machines are to be fully utilized.
+\section{Conclusions}
+In this work we have successfully shown that it is possible to implement a parallelized version of NumPy\cite{numpy} that seamlessly utilize distributed memory architectures. The only API different between NumPy and our parallelized version, DistNumPy, is an extra optional parameter in the array creation routines.
+
+To obtain good performance with NumPy the user is required to make use of array operations rather than using Python loops. DistNumPy take advantage of this fact and parallelizes array operations. It is therefore just as easy to utilize DistNumPy as to utilize NumPy.
+
+Performance measurements of three Python program, which make use of DistNumPy, shows very good performance and scalability. A CPU utilization of 88\% is achieved on a 64 CPU-cores Nehalem cluster running a CPU-intensive Monte Carlo simulation. A more memory-intensive N-body simulation achieves a CPU utilization of 91\% on 16 CPU-cores but only 63\% on 64 CPU-cores. Similar a Jacobi solver achieves a CPU utilization of 85\% on 16 CPU-cores and 50\% on 64 CPU-cores.
+
+We conclude that it is possible to obtain significant speedup with DistNumPy. However, further work is needed if shared memory machines are to be fully utilized. 
 
 
 %\section*{Acknowledgements}
