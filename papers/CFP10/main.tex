@@ -460,7 +460,7 @@ NumPy supports a long range of architectures from the widespread x86 to the spec
 \subsection{Related work}
 Libraries and programming languages that support parallelization on distributed memory architectures is a well known concept. The existing tools either seek to provide optimal performance in parallel applications or, like DistNumPy, seek to ease the task of writing parallel applications.
 
-The library ScaLAPACK\cite{Blackford96} is a parallel version of the linear algebra library LAPACK\cite{lapack90}. It introduces efficient parallel operations on distributed matrices and vectors. To use ScaLAPACK, an application must be programmed using MPI\cite{mpi} and it is the responsibility of the programmer to ensure that the allocation of matrices and vectors comply with the distribution layout ScalaPACK specifies.
+The library ScaLAPACK\cite{Blackford96} is a parallel version of the linear algebra library LAPACK\cite{lapack90}. It introduces efficient parallel operations on distributed matrices and vectors. To use ScaLAPACK, an application must be programmed using MPI\cite{mpi} and it is the responsibility of the programmer to ensure that the allocation of matrices and vectors comply with the distribution layout ScaLAPACK specifies.
 
 Another library, Global Arrays\cite{Nieplocha96}, introduces a distributed data object (global array), which makes the data distribution transparent to the user. It also supports efficient parallel operations and provides a higher level of abstraction than ScaLAPACK. However, the programmer must still explicitly coordinate the multiple processes that are involved in the computation. The programmer must specify which region of a global array is relevant for a given process.
 
