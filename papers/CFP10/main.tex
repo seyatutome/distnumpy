@@ -482,8 +482,17 @@ The primary NumPy interface is a Python interface and it is possible to use NumP
 An important mechanism in NumPy is a concept called “Universal function”. A universal function (ufunc) is a function that operates on arrays in an element-by-element fashion. That is, a ufunc is a “vectorized” wrapper for a function that takes a fixed number of scalar inputs and produces a fixed number of scalar outputs. Using ufunc can give a significant performance boost compared to native Python because the computation-loop is executed in C.
 
 \subsubsection{Function broadcasting}
-To make ufunc more flexible, it is possible to use arrays with different number of dimensions. To allow this, the length of each dimension must either be identical or have the length one. When applying the ufunc, all dimensions with a size of one will be \emph{broadcasted}. That is, the first data entry in the dimension will be used for all calculations along that dimension. For example, the following statement will produce a new matrix $C$ in which the vector $A$ is added element-by-element to every row in the matrix $B$: \[C_{MxN} = A_N+B_{MxN}\]
+To make ufunc more flexible, it is possible to use arrays with different number of dimensions. To allow this, the length of each dimension must either be identical or have the length one. When applying the ufunc, all dimensions with a size of one will be \emph{broadcasted}. That is, the array will be duplicated along that dimension (Figure \ref{fig:ufunc_broadcast}).
+
+%first data entry in the dimension will be used for all calculations along that dimension. For example, the following statement will produce a new matrix $C$ in which the vector $A$ is added element-by-element to every row in the matrix $B$: \[C_{MxN} = A_N+B_{MxN}\]
 It is possible to implement a great diversity of algorithms efficiently in Python when combining NumPy's ufunc with more traditional numerical functions like matrix multiplication, factorization etc.
+
+\begin{figure}
+ \centering
+ \includegraphics[width=120px]{gfx/ufunc_broadcast}
+ \caption{Universal function broadcasting. The ufunc \texttt{addition} is applied on a 3x2 array and a 1x2 array. The first dimension of the 1x2 array is broadcasted to the size of the first dimension of the 3x2 array. The result is a 3x2 array in which the two arrays are added together in an element-by-element fashion.}
+ \label{fig:ufunc_broadcast}
+\end{figure}
 
 
 \subsection{Basic Linear Algebra Subprograms}
