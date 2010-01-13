@@ -476,16 +476,15 @@ Python has become a popular language for high performance computing even though 
 NumPy\cite{numpy} is a library for numerical operations in Python which is implemented in the C programming language. NumPy provides the programmer with an N-dimensional array object and a whole range of supported operations. By using these operations NumPy takes advantage of the performance of C while retaining the high abstraction level of Python. However, this also means that no performance advantage is obtained if the user does not make use of the array operations in NumPy e.g. if using a normal Python loop to traverse a NumPy array.
 
 \subsection{Interfaces}
-The primary NumPy interface is a Python interface and it is possible to use NumPy exclusively from Python. NumPy also have a C interface in which it is possible to access the same functionality as in the Python interface. The C interface makes it possible to access low level data structures like pointers to array data and thereby provides the possibility to implement arbitrary array operations efficiently in C. The two interfaces can be used interchangeably through the Python program.
+The primary NumPy interface is a Python interface and it is possible to use NumPy exclusively from Python. NumPy also provide a C interface in which it is possible to access the same functionality as in the Python interface. The C interface allow programmers to access low level data structures like pointers to array data and thereby provides the possibility to implement arbitrary array operations efficiently in C. The two interfaces may be used interchangeably through the Python program.
 
 \subsection{Universal functions}
-An important mechanism in NumPy is a concept called “Universal function”. A universal function (ufunc) is a function that operates on arrays in an element-by-element fashion. That is, a ufunc is a “vectorized” wrapper for a function that takes a fixed number of scalar inputs and produces a fixed number of scalar outputs. Using ufunc can give a significant performance boost compared to native Python because the computation-loop is executed in C.
+An important mechanism in NumPy is a concept called Universal function. A universal function (ufunc) is a function that operates on all elements in an array independently. That is, a ufunc is a vectorized wrapper for a function that takes a fixed number of scalar inputs and produces a fixed number of scalar outputs. Using ufunc can result in a significant performance boost compared to native Python because the computation-loop is executed in C.
 
 \subsubsection{Function broadcasting}
-To make ufunc more flexible, it is possible to use arrays with different number of dimensions. To allow this, the length of each dimension must either be identical or have the length one. When applying the ufunc, all dimensions with a size of one will be \emph{broadcasted}. That is, the array will be duplicated along that dimension (Figure \ref{fig:ufunc_broadcast}).
+To make ufunc more flexible, it is possible to use arrays of different dimensionality. To utilize this feature, the array size in dimension must either be identical or have the length one. When the ufunc is applied, all dimensions with a size of one will be \emph{broadcasted} in the NumPy terminologi. That is, the array will be duplicated along that dimension (Figure \ref{fig:ufunc_broadcast}).
 
-%first data entry in the dimension will be used for all calculations along that dimension. For example, the following statement will produce a new matrix $C$ in which the vector $A$ is added element-by-element to every row in the matrix $B$: \[C_{MxN} = A_N+B_{MxN}\]
-It is possible to implement a great diversity of algorithms efficiently in Python when combining NumPy's ufunc with more traditional numerical functions like matrix multiplication, factorization etc.
+It is possible to implement a many array operations efficiently in Python by combining NumPy's ufunc with more traditional numerical functions like matrix multiplication, factorization etc.
 
 \begin{figure}
  \centering
@@ -496,13 +495,13 @@ It is possible to implement a great diversity of algorithms efficiently in Pytho
 
 
 \subsection{Basic Linear Algebra Subprograms}
-NumPy makes use of the numerical library Basic Linear Algebra Subprograms (BLAS) \cite{blas79}. A highly optimized BLAS implementation exists for almost any HPC platform and NumPy exploits this whenever possible. Operations on vector-vector, matrix-vector and matrix-matrix (BLAS level 1, 2 and 3 respectively) all use BLAS in NumPy. 
+NumPy makes use of the numerical library Basic Linear Algebra Subprograms (BLAS) \cite{blas79}. A highly optimized BLAS implementation exists for almost all HPC platforms and NumPy exploits this when possible. Operations on vector-vector, matrix-vector and matrix-matrix (BLAS level 1, 2 and 3 respectively) all use BLAS in NumPy. 
 
 
 \section{DistNumPy}
-DistNumPy\cite{distnumpy09} is a new version of NumPy that parallelize array operations in a manner completely transparent to the user - from the perspective of the user, the difference between NumPy and DistNumPy is minimal. DistNumPy can use multiple processors through the communication library Message Passing Interface (MPI)\cite{mpi}. However, we have chosen not to follow the standard MPI approach in which the user-program is executed on all MPI-processes. Because the standard MPI approach requires the user to differentiate between the MPI-processes, e.g. sequential areas in the user-program must be guarded with a branch based on the process' MPI-rank. In DistNumPy MPI communication must be fully transparent and the user needs no knowledge of MPI or any parallel program model. The user still needs to use the array operations in NumPy to obtain any kind of speedup.
+DistNumPy\cite{distnumpy09} is a new version of NumPy that parallelize array operations in a manner completely transparent to the user - from the perspective of the user, the difference between NumPy and DistNumPy is minimal. DistNumPy can use multiple processors through the communication library Message Passing Interface (MPI)\cite{mpi}. However, we have chosen not to follow the standard MPI approach in which the same user-program is executed on all MPI-processes. Because the standard MPI approach requires the user to differentiate between the MPI-processes, e.g. sequential areas in the user-program must be guarded with a branch based on the process' MPI-rank. In DistNumPy MPI communication must be fully transparent and the user needs no knowledge of MPI or any parallel program model. The user is required to use the array operations in NumPy to obtain any kind of speedup.
 
-The only difference between the API of NumPy and DistNumPy is in the array creation routines. Since we allow distributed and non-distributed arrays to co-exist, the user can specify, as an optional parameter, if the array should be distributed. The following illustrates the only difference between the creation of a standard array and a distributed array:
+The only change to the NumPy API in the DistNumPy version is in the array creation routines. Since DistNumPy allow both distributed and non-distributed arrays to co-exist, the user must specify, as an optional parameter, if the array should be distributed. The following illustrates the only difference between the creation of a standard array and a distributed array:
 \lstset{frame=none, xleftmargin=0mm, numbers=none}
 \begin{lstlisting}
 A = numpy.array([1,2,3])#Non-Distributed
@@ -512,13 +511,13 @@ B = numpy.array([1,2,3], dist=True)#Distributed
 
 
 \subsection{Interfaces}
-Our goal in DistNumPy is to support NumPy's Python interface completely. A great subset of NumPy's C interface is also supported in DistNumPy. However, the part of the C interface that involves direct access to low level data structures is not supported. The reason being that it is not feasible to return a pointer to a continuous memory block that represent the elements in a distributed array.
+The goal of DistNumPy is to support NumPy's Python interface completely. A great subset of NumPy's C interface is also supported in DistNumPy. However, the part of the C interface that involves direct access to low level data structures is not supported. The reason being that it is not feasible to return a pointer to a continuous memory block that represent the elements in a distributed array.
 
 
 \subsection{Data layout}
 Two-Dimensional Block Cyclic Distribution is a very popular distribution scheme and it is used in numerical libraries like ScaLAPACK\cite{Blackford96} and LINPACK\cite{linpack79}. It supports matrices and vectors and has a good load balance in numerical problems like Gaussian elimination that have a diagonal workflow. The distribution scheme works by arranging all MPI-processes in a two dimensional grid and then distributing data-blocks in a round-robin fashion either along one or both grid dimensions (Figure \ref {fig:datalayout}); the result is a well-balanced distribution.
 
-NumPy is not limited to matrices and vectors as it supports arrays with an arbitrary number of dimensions. We therefore use a more generalized N-Dimensional Block Cyclic Distribution inspired by High Performance Fortran\cite{Loveman93}, which supports an arbitrary number of dimensions. Instead of using a fixed process grid, we have a process grid for every array dimensionality. This works well when operating on arrays with identical dimensionality but causes problems otherwise. For instance in a BLAS level-2 operation, i.e. matrix-vector multiplication the two arrays are distributed on different process grid and may therefore require more communication. ScaLAPACK solves the problem by distributing vectors on two-dimensional process grids but this will result in vector operations not utilizing all processes. Another solution is to redistribute the data between a series of identically leveled BLAS operations using a fast runtime redistribution algorithm like \cite{PrylliT97}.
+NumPy is not limited to matrices and vectors as it supports arrays with an arbitrary number of dimensions. DistNumPy therefore use a more generalized N-Dimensional Block Cyclic Distribution inspired by High Performance Fortran\cite{Loveman93}, which supports an arbitrary number of dimensions. Instead of using a fixed process grid, we have a process grid for every array dimensionality. This works well when operating on arrays with identical dimensionality but causes problems otherwise. For instance in a BLAS level-2 operation, i.e. matrix-vector multiplication the two arrays are distributed on different process grid and may therefore require more communication. ScaLAPACK solves the problem by distributing vectors on two-dimensional process grids but this will result in vector operations that cannot utilize all procesors. An alternative solution is to redistribute the data between a series of identically leveled BLAS operations using a fast runtime redistribution algorithm like \cite{PrylliT97} demonstrates.
 
 
 \subsection{Operation dispatching}
@@ -529,7 +528,7 @@ The following describes the flow of the dispatching:
 \item The master is the dispatcher and will, when the user applies a python command on a distributed array, compose a message with meta-data describing the command. 
 \item The message is then broadcasted from the master to the slaves with a blocking MPI-broadcast. It is important to note that the message only consist of meta-data and not any actual array data.
 \item After the broadcast, all MPI-processes will apply the command on the sub-array they own and exchange array elements as required (Point-to-Point communication).
-\item When the command is applied, the slaves will wait for the next command from the master and the master will return to the user's python program. The master will return even though some slaves may still be working on the command, synchronization is therefore required before the next command broadcast.
+\item When the command is completed, the slaves will wait for the next command from the master and the master will return to the user's python program. The master will return even though some slaves may still be working on the command, synchronization is therefore required before the next command broadcast.
 \end{enumerate}
 
 
@@ -547,7 +546,7 @@ A distributed array is represented by two data structures in DistNumPy:
 \item \textbf{Array-base} is the base of an array and has direct access to the content of the array in main memory. An array-base is created with all related meta-data when the user allocates a new distributed array, but the user will never access the array directly through the array-base. The array-base always describes the whole array and its meta-data such as size, data type will never change.
 \item \textbf{Array-view} is a view of one array-base. The view can represent the whole array or only a sub-part of the array. It contains its own meta-data that describe which part of the array-base is visible and it can even add non-existing 1-length dimensions to the array-base. The array-view is manipulated directly by the user and from the users perspective the array-view is the array.
 \end{itemize}
-Array-views are not allowed to refer to each other, which means that the hierarchy is very flat with only three levels: main memory, array-base and array-view. However, multiple array-views are allowed to refer to the same array-base. This hierarchy is illustrated in figure \ref{fig:views}. 
+Array-views are not allowed to refer to each other, which means that the hierarchy is flat with only three levels: main memory, array-base and array-view. However, multiple array-views are allowed to refer to the same array-base. This hierarchy is illustrated in figure \ref{fig:views}. 
 
 \begin{figure}
  \centering
@@ -557,7 +556,7 @@ Array-views are not allowed to refer to each other, which means that the hierarc
 \end{figure}
 
 \subsection{Optimizations}
-We introduce a hierarchy of implementations all optimized for specific operation scenarios because the performance impact when optimizing a NumPy operation in the general case is very limited. It is far easier to optimize and make computational shortcuts if we have some predefined simplifications. When applying an operation, a search through the hierarchy determines the most optimized implementation for that particular operation. At the bottom of the hierarchy, we have a implementation that can handle all operation scenarios.
+We introduce a hierarchy of implementations all optimized for specific operation scenarios because the performance impact when optimizing a NumPy operation in the general case is very limited. It is far easier to optimize and make computational shortcuts if we have some predefined simplifications. When an operation is applied, a search through the hierarchy determines the most optimized implementation for that particular operation. At the bottom of the hierarchy, there is an implementation that can handle all operation scenarios.
 
 Most simplifications are related to the use of partial views, which are array-views that represents a sub-part of the underlying array-base. It is much simpler to handle array-views that represent the whole array-base 1-to-1 rather than handle arbitrary array-views. For instance, blocking communication together in large MPI-messages becomes difficult and introduces a significant overhead when using non-continuous array-views. The problem is the data distribution scheme (N-Dimensional Block Cyclic Distribution). It becomes hard for an MPI-process to determine which part of its local data the array-view covers. By introducing a simplified scenario that only includes continuous array-views we have implemented a very efficient blocked universal function.
 
