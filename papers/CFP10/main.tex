@@ -471,9 +471,9 @@ A higher level of abstraction is found in projects where the execution, seen fro
 The Simple Parallel R INTerface (SPRINT)\cite{Hill08} is a parallel framework for the programming language R. The abstraction level in SPRINT is similar to DistNumPy in the sense that the distribution and parallelization is completely transparent to the user.
 
 \section{NumPy}
-Python has become a popular language for high performance computing even though the performance of Python programs is is much lower than that of compiled languages. The growing popularity is because Python is used as the coordinating language while the compute intensive tasks are implemented in a high performance language.
+Python has become a popular language for high performance computing even though the performance of Python programs is much lower than that of compiled languages. The growing popularity is because Python is used as the coordinating language while the compute intensive tasks are implemented in a high performance language.
 
-NumPy\cite{numpy} is a library for numerical operations in Python which is implemented in the C programming language. NumPy provides the programmer with an N-dimensional array object and a whole range of supported operations. By using these operations NumPy takes advantage of the performance of C while retaining the high abstraction level of Python. However, this also means that no performance advantage is obtained if the user does not make use of the array operations in NumPy e.g. if using a normal Python loop to traverse a NumPy array.
+NumPy\cite{numpy} is a library for numerical operations in Python which is implemented in the C programming language. NumPy provides the programmer with an N-dimensional array object and a whole range of supported array operations. By using the array operations, NumPy takes advantage of the performance of C while retaining the high abstraction level of Python. However, this also means that no performance improvement is obtained otherwise e.g. using a Python loop to traverse a NumPy array does not result in any performance gain. 
 
 \subsection{Interfaces}
 The primary NumPy interface is a Python interface and it is possible to use NumPy exclusively from Python. NumPy also provide a C interface in which it is possible to access the same functionality as in the Python interface. The C interface allow programmers to access low level data structures like pointers to array data and thereby provides the possibility to implement arbitrary array operations efficiently in C. The two interfaces may be used interchangeably through the Python program.
@@ -482,7 +482,7 @@ The primary NumPy interface is a Python interface and it is possible to use NumP
 An important mechanism in NumPy is a concept called Universal function. A universal function (ufunc) is a function that operates on all elements in an array independently. That is, a ufunc is a vectorized wrapper for a function that takes a fixed number of scalar inputs and produces a fixed number of scalar outputs. Using ufunc can result in a significant performance boost compared to native Python because the computation-loop is executed in C.
 
 \subsubsection{Function broadcasting}
-To make ufunc more flexible, it is possible to use arrays of different dimensionality. To utilize this feature, the array size in dimension must either be identical or have the length one. When the ufunc is applied, all dimensions with a size of one will be \emph{broadcasted} in the NumPy terminologi. That is, the array will be duplicated along that dimension (Figure \ref{fig:ufunc_broadcast}).
+To make ufunc more flexible it is possible to use arrays of different dimensionality. To utilize this feature the array size in dimension must either be identical or have the length one. When the ufunc is applied, all dimensions with a size of one will be \emph{broadcasted} in the NumPy terminologi. That is, the array will be duplicated along that dimension (Figure \ref{fig:ufunc_broadcast}).
 
 It is possible to implement a many array operations efficiently in Python by combining NumPy's ufunc with more traditional numerical functions like matrix multiplication, factorization etc.
 
@@ -499,7 +499,7 @@ NumPy makes use of the numerical library Basic Linear Algebra Subprograms (BLAS)
 
 
 \section{DistNumPy}
-DistNumPy\cite{distnumpy09} is a new version of NumPy that parallelize array operations in a manner completely transparent to the user - from the perspective of the user, the difference between NumPy and DistNumPy is minimal. DistNumPy can use multiple processors through the communication library Message Passing Interface (MPI)\cite{mpi}. However, we have chosen not to follow the standard MPI approach in which the same user-program is executed on all MPI-processes. Because the standard MPI approach requires the user to differentiate between the MPI-processes, e.g. sequential areas in the user-program must be guarded with a branch based on the process' MPI-rank. In DistNumPy MPI communication must be fully transparent and the user needs no knowledge of MPI or any parallel program model. The user is required to use the array operations in NumPy to obtain any kind of speedup.
+DistNumPy\cite{distnumpy09} is a new version of NumPy that parallelize array operations in a manner completely transparent to the user - from the perspective of the user, the difference between NumPy and DistNumPy is minimal. DistNumPy can use multiple processors through the communication library Message Passing Interface (MPI)\cite{mpi}. However, we have chosen not to follow the standard MPI approach in which the same user-program is executed on all MPI-processes. Because the standard MPI approach requires the user to differentiate between the MPI-processes, e.g. sequential areas in the user-program must be guarded with a branch based on the process' MPI-rank. In DistNumPy MPI communication must be fully transparent and the user needs no knowledge of MPI or any parallel program model. The user is required to use the array operations in DistNumPy to obtain any kind of speedup, but we think it is a reasonable requirement since it is already required by NumPy.
 
 The only change to the NumPy API in the DistNumPy version is in the array creation routines. Since DistNumPy allow both distributed and non-distributed arrays to co-exist, the user must specify, as an optional parameter, if the array should be distributed. The following illustrates the only difference between the creation of a standard array and a distributed array:
 \lstset{frame=none, xleftmargin=0mm, numbers=none}
@@ -511,7 +511,7 @@ B = numpy.array([1,2,3], dist=True)#Distributed
 
 
 \subsection{Interfaces}
-The goal of DistNumPy is to support NumPy's Python interface completely. A great subset of NumPy's C interface is also supported in DistNumPy. However, the part of the C interface that involves direct access to low level data structures is not supported. The reason being that it is not feasible to return a pointer to a continuous memory block that represent the elements in a distributed array.
+There are two programming interfaces in NumPy - one in Python and one in C. We aim to support the complete Python interface and a great subset of the C interface in DistNumPy. However, the part of the C interface that involves direct access to low level data structures will not be supported. It is not feasible to return a C-pointer that represents the elements in a distributed array.
 
 
 \subsection{Data layout}
@@ -643,7 +643,9 @@ A Newtonian N-body simulation is one that studies how bodies, represented by a m
 \section{Experiments}
 In this section, we will conduct performance benchmarks on DistNumPy and NumPy\footnote{NumPy version 1.3.0}. We will benchmark the three Python programs presented in the previous section. All benchmarks are executed on two different Linux clusters. (Table \ref{tab:specs}).
 
-Our experiments consist of a speedup benchmark which we define as a comparison between a sequential execution with NumPy and a parallelized execution with DistNumPy. The input is the same in all executions.
+Our experiments consist of a speedup benchmark, which we define as a runtime comparison between a sequential execution with NumPy and a parallelized execution with DistNumPy while the input is identical in all executions.
+
+%To investigate the performance difference between using a single CPU-core and multiple CPU-cores per node, we include speedup graphs that show the two scenarios. 
 
 %We define a strong-scale benchmark as a comparison between a sequential execution with NumPy and a parallelized execution with DistNumPy where the input size is fixed. We define a weak-scale benchmark similar but with an input that scales linearly with the number of CPU-cores.
 
@@ -670,15 +672,16 @@ Network & Gigabit Ethernet & Gigabit Ethernet\\
 \subsection{Monte Carlo simulation}
 A Distributed Monte Carlo simulation is embarrassingly parallel and requires a minimum of communication.  This is also the case when using DistNumPy because ufuncs are only applied on identically shaped arrays and it is therefore the simplest ufuncs scenario.
 
-The result of the speedup benchmark is illustrated in figure \ref{fig:MonteCarlo}. We see a close to linear speedup both for the Core 2 and the Nehalem cluster. A CPU utilization of 88\% is achieved on 64 Nehalem CPU-cores.
+The result of the speedup benchmark is illustrated in figure \ref{fig:MonteCarlo}. We see a close to linear speedup both for the Core 2 and the Nehalem cluster. A CPU utilization of 88\% is achieved on 64 Nehalem CPU-cores.\begin{tiny}\end{tiny} The penalty of using multiple CPU-cores per node is only noticeable on the Core 2 architecture.
+
 
 
 \begin{figure*}%
   \begin{center}%
     \subfloat[\label{fig:MonteCarloStrong}]{\includegraphics[width=170px]{gfx/MonteCarloStrong}}
 %    \qquad
-    \subfloat[\label{fig:MonteCarloStrongZoomed}]{\includegraphics[width=170px]{gfx/MonteCarloStrongZoomed}}
-    \caption{Speedup graph of the Monte Carlo simulation. Besides having different scale, the (b) graph only goes to 8 CPU-cores whereas (a) goes to 64 CPU-cores, the two graphs are identical.}%
+    \subfloat[\label{fig:MonteCarloStrongSMP}]{\includegraphics[width=170px]{gfx/MonteCarloStrongSMP}}
+    \caption{Speedup graphs of the Monte Carlo simulation. In graph (a) the two architectures uses one CPU-core per node. In graph (b) the result of using multiple CPU-cores on a single node (SMP) is also included.}%
     \label{fig:MonteCarlo}%
   \end{center}
 \end{figure*}
@@ -695,8 +698,8 @@ The result of the speedup benchmark is illustrated in figure \ref{fig:JacobiScal
   \begin{center}%
     \subfloat[\label{fig:JacobiStrong}]{\includegraphics[width=170px]{gfx/JacobiStrong}}
 %    \qquad
-    \subfloat[\label{fig:JacobiStrongZoomed}]{\includegraphics[width=170px]{gfx/JacobiStrongZoomed}}
-    \caption{Speedup of the Jacobi solver. Besides having different scale, the (b) graph only goes to 8 CPU-cores whereas (a) goes to 64 CPU-cores, the two graphs are identical.}%
+    \subfloat[\label{fig:JacobiStrongSMP}]{\includegraphics[width=170px]{gfx/JacobiStrongSMP}}
+    \caption{Speedup of the Jacobi solver. In graph (a) the two architectures uses one CPU-core per node. In graph (b) the result of using multiple CPU-cores on a single node (SMP) is also included.}%
     \label{fig:JacobiScale}%
   \end{center}
 \end{figure*}
@@ -709,17 +712,18 @@ The result of the speedup benchmark is illustrated in figure \ref{fig:NbodyScale
   \begin{center}%
     \subfloat[\label{fig:NbodyStrong}]{\includegraphics[width=170px]{gfx/NbodyStrong}}
 %    \qquad
-    \subfloat[\label{fig:NbodyStrongZoomed}]{\includegraphics[width=170px]{gfx/NbodyStrongZoomed}}
-    \caption{Speedup of Newtonian N-body simulation. Besides having different scale, the (b) graph only goes to 8 CPU-cores whereas (a) goes to 64 CPU-cores, the two graphs are identical.}%
+    \subfloat[\label{fig:NbodyStrongSMP}]{\includegraphics[width=170px]{gfx/NbodyStrongSMP}}
+    \caption{Speedup of Newtonian N-body simulation. In graph (a) the two architectures uses one CPU-core per node. In graph (b) the result of using multiple CPU-cores on a single node (SMP) is also included.}%
     \label{fig:NbodyScale}%
   \end{center}
 \end{figure*}
 
 
 \subsection{Summary}
-The benchmarks clearly show that DistNumPy has both good performance and scalability when execution is not bound by the memory bandwidth, which is evident from looking at the speedup from one to eight CPU-cores (one the right speedup graphs). As expected the scalability of the Monte Carlo simulation is better than the Jacobi and the N-body computation simply because of the reduced communication requirements. 
+The benchmarks clearly show that DistNumPy has both good performance and scalability when execution is not bound by the memory bandwidth, which is evident from looking at the CPU utilization when only one CPU-core per node is used. As expected the scalability of the Monte Carlo simulation is better than the Jacobi and the N-body computation simply because of the reduced communication requirements. 
 
-The scalability of the Jacobi and the N-body computation is drastically reduced when using all available CPU-cores. The problem is the complexity of the ufunc operations. As opposed to the Monte Carlo simulation, which makes use of a complex ufunc, the Jacobi and the N-body computation only use simple ufuncs e.g. add and multiplication. 
+The scalability of the Jacobi and the N-body computation is drastically reduced when using multiple CPU-cores per node. The problem is the complexity of the ufunc operations. As opposed to the Monte Carlo simulation, which makes use of a complex ufunc, the Jacobi and the N-body computation only use simple ufuncs e.g. add and multiplication.
+
 
 
 \section{Future work}
