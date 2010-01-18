@@ -501,7 +501,7 @@ NumPy makes use of the numerical library Basic Linear Algebra Subprograms (BLAS)
 
 \section{DistNumPy}
 %\cite{distnumpy09}
-DistNumPy is a new version of NumPy that parallelize array operations in a manner completely transparent to the user - from the perspective of the user, the difference between NumPy and DistNumPy is minimal. DistNumPy can use multiple processors through the communication library Message Passing Interface (MPI)\cite{mpi}. However, we have chosen not to follow the standard MPI approach in which the same user-program is executed on all MPI-processes. This is because the standard MPI approach requires the user to differentiate between the MPI-processes, e.g. sequential areas in the user-program must be guarded with a branch based on the MPI-rank of a process. In DistNumPy MPI communication must be fully transparent and the user needs no knowledge of MPI or any parallel programming model. However, the user is required to use the array operations in DistNumPy to obtain any kind of speedup. We think this is a reasonable requirement since it is also required by NumPy.
+DistNumPy is a new version of NumPy that parallelize array operations in a manner completely transparent to the user - from the perspective of the user, the difference between NumPy and DistNumPy is minimal. DistNumPy can use multiple processors through the communication library Message Passing Interface (MPI)\cite{mpi}. However, we have chosen not to follow the standard MPI approach in which the same user-program is executed on all MPI-processes. This is because the standard MPI approach requires the user to differentiate between the MPI-processes, e.g. sequential areas in the user-program must be guarded with a branch based on the MPI-rank of the process. In DistNumPy MPI communication must be fully transparent and the user needs no knowledge of MPI or any parallel programming model. However, the user is required to use the array operations in DistNumPy to obtain any kind of speedup. We think this is a reasonable requirement since it is also required by NumPy.
 
 The only difference in the API of NumPy and DistNumPy is the array creation routines. DistNumPy allow both distributed and non-distributed arrays to co-exist thus the user must specify, as an optional parameter, if the array should be distributed. The following illustrates the only difference between the creation of a standard array and a distributed array:
 \lstset{frame=none, xleftmargin=0mm, numbers=none}
@@ -519,7 +519,7 @@ There are two programming interfaces in NumPy - one in Python and one in C. We a
 \subsection{Data layout}
 Two-Dimensional Block Cyclic Distribution is a very popular distribution scheme and it is used in numerical libraries like ScaLAPACK\cite{Blackford96} and LINPACK\cite{linpack79}. It supports matrices and vectors and has a good load balance in numerical problems that have a diagonal computation workflow e.g. Gaussian elimination. The distribution scheme works by arranging all MPI-processes in a two dimensional grid and then distributing data-blocks in a round-robin fashion either along one or both grid dimensions (Figure \ref {fig:datalayout}); the result is a well-balanced distribution.
 
-NumPy is not limited to matrices and vectors as it supports arrays with an arbitrary number of dimensions. DistNumPy therefore use a more generalized N-Dimensional Block Cyclic Distribution inspired by High Performance Fortran\cite{Loveman93}, which supports an arbitrary number of dimensions. Instead of using a fixed process grid, we have a process grid for every array dimensionality. This works well when operating on arrays with identical dimensionality but causes problems otherwise. For instance in a matrix-vector multiplication the two arrays are distributed on different process grid and may therefore require more communication. ScaLAPACK solves the problem by distributing vectors on two-dimensional process grids instead of one-dimensional process grids, but this will result in vector operations that cannot utilize all available processors. An alternative solution is to redistribute the data between a series of identically leveled BLAS operations using a fast runtime redistribution algorithm like \cite{PrylliT97} demonstrates.
+NumPy is not limited to matrices and vectors as it supports arrays with an arbitrary number of dimensions. DistNumPy therefore use a more generalized N-Dimensional Block Cyclic Distribution inspired by High Performance Fortran\cite{Loveman93}, which supports an arbitrary number of dimensions. Instead of using a fixed process grid, we have a process grid for every number of dimensions. This works well when operating on arrays with the same number of dimensions but causes problems otherwise. For instance in a matrix-vector multiplication the two arrays are distributed on different process grid and may therefore require more communication. ScaLAPACK solves the problem by distributing vectors on two-dimensional process grids instead of one-dimensional process grids, but this will result in vector operations that cannot utilize all available processors. An alternative solution is to redistribute the data between a series of identically leveled BLAS operations using a fast runtime redistribution algorithm like \cite{PrylliT97} demonstrates.
 
 
 \subsection{Operation dispatching}
@@ -555,7 +555,7 @@ Array-views are not allowed to refer to each other, which means that the hierarc
 \begin{figure}
  \centering
  \includegraphics[width=250px]{gfx/views}
- \caption{Reference hierarchy between the two array data structures and the main memory. Only the array-views at top of the hierarchy are visible from the perspective of the user.}
+ \caption{Reference hierarchy between the two array data structures and the main memory. Only the three array-views at top of the hierarchy are visible from the perspective of the user.}
  \label{fig:views}
 \end{figure}
 
@@ -676,7 +676,7 @@ Network & Gigabit Ethernet & Gigabit Ethernet\\
 \subsection{Monte Carlo simulation}
 A Distributed Monte Carlo simulation is embarrassingly parallel and requires a minimum of communication.  This is also the case when using DistNumPy because ufuncs are only applied on identically shaped arrays and it is therefore the simplest ufunc scenario. Additionally, the implementation is CPU-intensive because a complex ufunc is used as random number generator. 
 
-The result of the speedup benchmark is illustrated in Figure \ref{fig:MonteCarlo}. We see a close to linear speedup both for the Core 2 and the Nehalem cluster. A CPU utilization of 88\% is achieved on 64 Nehalem CPU-cores.\begin{tiny}\end{tiny} The penalty of using multiple CPU-cores per node is only noticeable on the Core 2 architecture.
+The result of the speedup benchmark is illustrated in Figure \ref{fig:MonteCarlo}. We see a close to linear speedup for the Nehalem cluster - a CPU utilization of 88\% is achieved on 64 CPU-cores. The penalty of using multiple CPU-cores per node is noticeable on the Core 2 architecture - a CPU utilization of 68\% is achieved on 32 CPU-cores.
 
 \begin{figure*}%
   \begin{center}%
@@ -720,7 +720,7 @@ The result of the speedup benchmark is illustrated in Figure \ref{fig:NbodyScale
 
 
 \subsection{Summary}
-The benchmarks clearly show that DistNumPy has both good performance and scalability when execution is not bound by the memory bandwidth, which is evident from looking at the CPU utilization when only one CPU-core per node is used. As expected the scalability of the Monte Carlo simulation is better than the Jacobi and the N-body computation because of the reduced communication requirements and more CPU-intensive ufunc operations. 
+The benchmarks clearly show that DistNumPy has both good performance and scalability when execution is not bound by the memory bandwidth, which is evident from looking at the CPU utilization when only one CPU-core per node is used. As expected the scalability of the Monte Carlo simulation is better than the Jacobi and the N-body computation because of the reduced communication requirements and more CPU-intensive ufunc operation. 
 
 The scalability of the Jacobi and the N-body computation is drastically reduced when using multiple CPU-cores per node. The problem is the complexity of the ufunc operations. As opposed to the Monte Carlo simulation, which makes use of a complex ufunc, the Jacobi and the N-body computation only use simple ufuncs e.g. add and multiplication.
 
