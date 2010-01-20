@@ -17,7 +17,7 @@ make install
 CC=mpicc /opt/debugpython/bin/python setup.py build
 }}}
 
-3)Run DistNumPy with valgrind
+3)Run DistNumPy with valgrind and use the suppression file in the misc dir.
 {{{
-valgrind --tool=memcheck  /opt/debugpython/bin/python test.py
+valgrind --suppressions=misc/valgrind.supp /opt/debugpython/bin/python test.py
 }}}
