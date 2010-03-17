@@ -1,9 +1,6 @@
-%\documentclass[conference]{IEEEtran}
-\documentclass[10pt]{article}
-\usepackage{fullpage}
-
-\usepackage{setspace}
-\doublespacing
+\documentclass[conference]{IEEEtran}
+%\documentclass[10pt]{article}
+%\usepackage{fullpage}
 
 % Add the compsoc option for Computer Society conferences.
 %
@@ -52,14 +49,14 @@
 
 % *** GRAPHICS RELATED PACKAGES ***
 %
-%\ifCLASSINFOpdf
-%   \usepackage[pdftex]{graphicx}
+\ifCLASSINFOpdf
+   \usepackage[pdftex]{graphicx}
   % declare the path(s) where your graphic files are
   % \graphicspath{{../pdf/}{../jpeg/}}
   % and their extensions so you won't have to specify these with
   % every instance of \includegraphics
-%   \DeclareGraphicsExtensions{.pdf,.jpeg,.png}
-%\else
+   \DeclareGraphicsExtensions{.pdf,.jpeg,.png}
+\else
   % or other class option (dvipsone, dvipdf, if not using dvips). graphicx
   % will default to the driver specified in the system graphics.cfg if no
   % driver is specified.
@@ -69,7 +66,7 @@
   % and their extensions so you won't have to specify these with
   % every instance of \includegraphics
    \DeclareGraphicsExtensions{.eps, .ps}
-%\fi
+\fi
 % graphicx was written by David Carlisle and Sebastian Rahtz. It is
 % required if you want graphics, photos, etc. graphicx.sty is already
 % installed on most LaTeX systems. The latest version and documentation can
@@ -265,15 +262,15 @@ numbers=left, numberstyle=\ttfamily\bfseries\footnotesize
 % author names and affiliations
 % use a multiple column layout for up to three different
 % affiliations
-%\author{\IEEEauthorblockN{Mads Ruben Burgdorff Kristensen}
-%\IEEEauthorblockA{eScience Centre\\
-%University of Copenhagen\\
-%Denmark}
-%\and
-%\IEEEauthorblockN{Brian Vinter}
-%\IEEEauthorblockA{eScience Centre\\
-%University of Copenhagen\\
-%Denmark}}
+\author{\IEEEauthorblockN{Mads Ruben Burgdorff Kristensen}
+\IEEEauthorblockA{eScience Centre\\
+University of Copenhagen\\
+Denmark}
+\and
+\IEEEauthorblockN{Brian Vinter}
+\IEEEauthorblockA{eScience Centre\\
+University of Copenhagen\\
+Denmark}}
 
 % conference papers do not typically use \thanks and this command
 % is locked out in conference mode. If really needed, such as for
@@ -447,11 +444,27 @@ We perform three experiments of sequential Python programs running on an Etherne
 
 
 \section{Introduction}
-In many scientific and engineering areas, there is a need to solve numerical problems. Researchers and engineers behind these applications often prefer a high level programming language such as Python\cite{Python} or Matlab when developing new algorithms. SciPy\cite{SciPy}, which is a collection of Python modules, has become a popular numerical framework amongst researchers. It supports a broad range of high-level computation operations and when experimenting with an application the user gets immediate feedback due to the interactive execution support in Python. 
+In many scientific and engineering areas, there is a need to solve numerical problems. Researchers and engineers behind these applications often prefer a high level programming language to implement new algorithms. Of particular interest are languages that support a broad range of high-level operations directly on vectors and matrices. Also of interest is the possibility to get immediate feedback when experimenting with an application. The programming language Python combined with the numerical library NumPy supports all these features and has become a popular numerical framework amongst researchers. 
 
-SciPy depends on a numerical computation module called NumPy\cite{numpy}, which is a fundamental module for scientific computing with Python. It is mostly implemented in C and introduces a flexible N-dimensional array object that supports a broad range of numerical operations. The performance of NumPy is significantly increased when using array-operations instead of scalar-operations on this new array.
+NumPy is mostly implemented in C and introduces a flexible N-dimensional array object that supports a broad range of numerical operations. The performance of NumPy is significantly increased when using array-operations instead of scalar-operations on this new array.
 
-A limited set of NumPy functions supports parallel execution but only in a shared memory environment. However, many scientific computations are computed on large distributed memory machines because of the computation and memory requirements of the applications. In such cases, the communication between processors has to be implemented by the programmer explicitly. The result is a significant difference between the sequential program and the parallelized program. DistNumPy eliminates this difference by introducing a distributed version of the N-dimensional array object. All operations on such distributed arrays will utilize all available processors and the array itself is distributed between multiple processors, which makes it possible to expand the size of the array to the aggregated available memory.
+Parallel execution is supported by a limited set of NumPy functions, but only in a shared memory environment. However, many scientific computations are executed on large distributed memory machines because of the computation and memory requirements of the applications. In such cases, the communication between processors has to be implemented by the programmer explicitly. The result is a significant difference between the sequential program and the parallelized program. DistNumPy eliminates this difference by introducing a distributed version of the N-dimensional array object. All operations on such distributed arrays will utilize all available processors and the array itself is distributed between multiple processors, which makes it possible to expand the size of the array to the aggregated available memory.
+
+\subsection{Motivation}
+\begin{figure}%
+  \begin{center}%
+    \subfloat[\label{fig:workflow1}]{\includegraphics[width=170px]{gfx/workflow1}}
+    \qquad
+    \subfloat[\label{fig:workflow2}]{\includegraphics[width=170px]{gfx/workflow2}}
+    \caption{Development workflow. (a) is a typical workflow that involves two languages: one for the prototype and one for the final version. In (b) only one language is used in the workflow.
+    }%
+    \label{fig:workflow}%
+  \end{center}
+\end{figure}
+
+Solutions to numerical problems often consist of two implementations: a prototype and a final version. The algorithm is developed and implemented in a prototype by which the correctness of the algorithm can be verified. Typical many iterations of development are required to obtain a correct prototype, thus for this purpose a high productivity language is used, most often MATLAB. However, when the correct algorithm is finished the performance of the implementation becomes essential for doing research with the algorithm. This performance requirement presents a problem for the researcher since highly optimized code requires a fairly low-level programming language such as C/C++ or FORTRAN. The final version will therefore typical be a reimplementation of the prototype, which involves both changing the programming language and parallelizing the implementation (Figure \ref{fig:workflow1}). 
+
+The overall target of DistNumPy is to provide a high productivity tool that meets both the need for a high productivity tool that allows researcher to move from idea to prototype in a short time, and the need for a high performance solution that will eliminate the need for a costly and risky reimplementation (Figure \ref{fig:workflow2}).
 
 
 \subsection{Target architectures}
@@ -483,7 +496,7 @@ The primary interface in NumPy is a Python interface and it is possible to use N
 An important mechanism in NumPy is a concept called Universal function. A universal function (ufunc) is a function that operates on all elements in an array independently. That is, a ufunc is a vectorized wrapper for a function that takes a fixed number of scalar inputs and produces a fixed number of scalar outputs. Using ufunc can result in a significant performance boost compared to native Python because the computation-loop is executed in C.
 
 \subsubsection{Function broadcasting}
-To make ufunc more flexible it is possible to use arrays with different number of dimensions. To utilize this feature the size of the dimensions must either be identical or have the length one. When the ufunc is applied, all dimensions with a size of one will be \emph{broadcasted} in the NumPy terminology. That is, the array will be duplicated along that dimension (Figure \ref{fig:ufunc_broadcast}).
+To make ufunc more flexible it is possible to use arrays with different number of dimensions. To utilize this feature the size of the dimensions must either be identical or have the length one. When the ufunc is applied, all dimensions with a size of one will be \emph{broadcasted} in the NumPy terminology. That is, the array will be duplicated along the \emph{broadcasted} dimension (Figure \ref{fig:ufunc_broadcast}).
 
 It is possible to implement many array operations efficiently in Python by combining NumPy's ufunc with more traditional numerical functions like matrix multiplication, factorization etc.
 
@@ -500,7 +513,6 @@ NumPy makes use of the numerical library Basic Linear Algebra Subprograms (BLAS)
 
 
 \section{DistNumPy}
-%\cite{distnumpy09}
 DistNumPy is a new version of NumPy that parallelize array operations in a manner completely transparent to the user - from the perspective of the user, the difference between NumPy and DistNumPy is minimal. DistNumPy can use multiple processors through the communication library Message Passing Interface (MPI)\cite{mpi}. However, we have chosen not to follow the standard MPI approach in which the same user-program is executed on all MPI-processes. This is because the standard MPI approach requires the user to differentiate between the MPI-processes, e.g. sequential areas in the user-program must be guarded with a branch based on the MPI-rank of the process. In DistNumPy MPI communication must be fully transparent and the user needs no knowledge of MPI or any parallel programming model. However, the user is required to use the array operations in DistNumPy to obtain any kind of speedup. We think this is a reasonable requirement since it is also required by NumPy.
 
 The only difference in the API of NumPy and DistNumPy is the array creation routines. DistNumPy allow both distributed and non-distributed arrays to co-exist thus the user must specify, as an optional parameter, if the array should be distributed. The following illustrates the only difference between the creation of a standard array and a distributed array:
@@ -536,7 +548,7 @@ The following describes the flow of the dispatching:
 
 \begin{figure}
  \centering
- \includegraphics[width=280px]{gfx/datalayout}
+ \includegraphics[width=\linewidth]{gfx/datalayout}
  \caption{The Two-Dimensional Block Cyclic Distribution of a matrix on a 2 x 3 grid of processors.}
  \label{fig:datalayout}
 \end{figure}
@@ -554,7 +566,7 @@ Array-views are not allowed to refer to each other, which means that the hierarc
 
 \begin{figure}
  \centering
- \includegraphics[width=250px]{gfx/views}
+ \includegraphics[width=\linewidth]{gfx/views}
  \caption{Reference hierarchy between the two array data structures and the main memory. Only the three array-views at top of the hierarchy are visible from the perspective of the user.}
  \label{fig:views}
 \end{figure}
@@ -641,7 +653,7 @@ Our implementation uses ufunc operations in a while-loop until it converges. Mos
 %\end{enumerate}
 
 \subsection{Newtonian N-body simulation}
-A Newtonian N-body simulation is one that studies how bodies, represented by a mass, a location, and a velocity, move in space according to the laws of Newtonian physics. We use a straightforward algorithm computing all body-body interactions. The NumPy implementation is a direct translation of a Matlab program\cite{assignmentNbody}. The working loop of the two implementations take up 19 lines in Python and 22 lines in Matlab thus it is too big to include here. However, the implementation is straightforward and use universal functions and matrix multiplications.
+A Newtonian N-body simulation is one that studies how bodies, represented by a mass, a location, and a velocity, move in space according to the laws of Newtonian physics. We use a straightforward algorithm computing all body-body interactions. The NumPy implementation is a direct translation of a MATLAB program\cite{assignmentNbody}. The working loop of the two implementations take up 19 lines in Python and 22 lines in MATLAB thus it is too big to include here. However, the implementation is straightforward and use universal functions and matrix multiplications.
 
 
 \section{Experiments}
