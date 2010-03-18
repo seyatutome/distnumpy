@@ -730,12 +730,17 @@ The result of the speedup benchmark is illustrated in Figure \ref{fig:NbodyScale
   \end{center}
 \end{figure*}
 
+\subsection{Alternative programming language}
+DistNumPy introduces a performance overhead compared to a lower-level programming language such as C/C++ or FORTRAN. To investigate this overhead we have implemented the Monte Carlo and the Jacobi benchmark in  C. The implementations use the same algorithm and they are optimized for sequential execution. 
+
+Executions on the both architectures show that DistNumPy is roughly 50\% slower than the C implementation when executing the Jacobi method, but almost 10 times slower when executing the Monte Carlo simulation. The problem with the Monte Carlo simulation is the very large vector allocations, which are required by the vectorization of the ufunc used in the DistNumPy implementation.
 
 \subsection{Summary}
 The benchmarks clearly show that DistNumPy has both good performance and scalability when execution is not bound by the memory bandwidth, which is evident from looking at the CPU utilization when only one CPU-core per node is used. As expected the scalability of the Monte Carlo simulation is better than the Jacobi and the N-body computation because of the reduced communication requirements and more CPU-intensive ufunc operation. 
 
 The scalability of the Jacobi and the N-body computation is drastically reduced when using multiple CPU-cores per node. The problem is the complexity of the ufunc operations. As opposed to the Monte Carlo simulation, which makes use of a complex ufunc, the Jacobi and the N-body computation only use simple ufuncs e.g. add and multiplication.
 
+As expected the performance of the C implementation is better than the DistNumPy implementation. However, by utilizing two CPU-cores it is possible to outperform the C implementation in the case of the Jacobi method. This is not a possibility in the case of the Monte Carlo simulation where the algorithm does not favor vectorization.
 
 \section{Future work}
 In its current state DistNumPy does not implement the NumPy interface completely. Many specialized operations like Fast Fourier transform or LU factorization is not implemented, but it is our intention to implement the complete Python interface and most of the C interface.
