@@ -105,7 +105,7 @@
 %% \address{Address\fnref{label3}}
 %% \fntext[label3]{}
 
-\title{GPAW optimized for Blue Gene/P using hybrid programming}
+\title{Hybrid Parallel Programming for Blue Gene/P}
 
 %% use optional labels to link authors explicitly to addresses:
 %% \author[label1,label2]{<author name>}
@@ -118,8 +118,7 @@
 \address{eScience Center - University of Copenhagen Denmark}
 
 \begin{abstract}
-The concept of massively parallel processors has been taken to the extreme with the introduction of the BlueGene architectures from IBM. With hundreds of thousands of processors in one machine the parallelism is extreme, but so are the techniques that must be applied to obtain performance with that many processors.
-
+The concept of massively parallel processors has been taken to the extreme with the introduction of the BlueGene architectures from IBM. With hundreds of thousands of processors in one machine the parallelism is extreme, but so are the techniques that must be applied to obtain performance with that many processors. 
 In this work we present optimizations of a Grid-based projector-augmented wave method software, GPAW \cite{Mortensen05} for the Blue Gene/P architecture. The improvements are achieved by exploring the advantage of shared and distributed memory programming also known as hybrid programming. The work focuses on optimizing a very time consuming operation in GPAW, the stencil operation, and different hybrid programming approaches are evaluated. The work succeeds in demonstrating a hybrid programming model which is clearly beneficial compared to the original flat programming model. In total an improvement of 1.94 compared to the original implementation is obtained. The results we demonstrate here are reasonably general and may be applied to other stencil codes.
 \end{abstract}
 
@@ -291,7 +290,7 @@ Another important performance aspect is how to map the distributed real-space gr
 \subsection{Multiple real-space grids}
 Double buffering and communication batching are two techniques which can improve the performance of the stencil operation. Both techniques requires multiple real-space grids but the stencil operation is typically applied on thousands of real-space grids.
 
-\subsection{Double buffering}
+\subsubsection{Double buffering}
 
 \begin{figure}
  \centering
@@ -311,7 +310,7 @@ Double buffering is a technique that makes it possible to overlap communication 
 \end{enumerate}
 The performance gain is dependent on the ability of the MPI library and the underlying hardware to process non-blocking send and receive calls. On the BGP, progress in non-blocking send and receive calls will be maintained by the DMA engine and increased performance is therefore expected.
 
-\subsection{Batching}
+\subsubsection{Batching}
 An way to ensure critical packet size is to pack real-space grids into batches; inspired by the message size experiment (Figure \ref{fig:batchsize}).
 
 Continuously dividing the grids between more and more MPI processes reduces the number of surface points in a single sub-grid. That is, at some point the amount of data send by a single MPI call will be reduced to a size in which the MPI overhead and network latency will dominate the communication overhead. The idea is to send a batch of surface points in each MPI call, instead of sending surface points, individually. This will reduce the communication overhead considerably, as the size of the sub-grids decreases. The number of grids packed together in this way, we call \emph{batch-size}.
@@ -423,7 +422,7 @@ While latency-hiding is the primary factor for the improvement we observe, the h
 Overall we are satisfied with the performance of the new implementation of the stencil operation, still a lot of work remains if the entire GPAW computation should utilize latency-hiding and hybrid programming. It may not be worth the hard work that is needed to rewrite most of GPAW, but it is our expectation that an overall performance gain as the one demonstrated in this work may be obtained for the application overall.
 
 \section{Acknowledgments}
-The authors would like to thank the GPAW team at the Technical University of Denmark in particular Jens J. Mortensen and Marcin Dulak. Furthermore we would like to thank Argonne National Laboratory for giving us access to the Blue Gene/P.
+The authors would like to thank The Danish Agency for Science, Technology and Innovation and the GPAW team at the Technical University of Denmark in particular Jens J. Mortensen and Marcin Dulak. Furthermore we would like to thank Argonne National Laboratory for giving us access to the Blue Gene/P.
 
 
 \bibliographystyle{model1b-num-names}
