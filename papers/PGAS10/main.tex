@@ -17,7 +17,7 @@
 %-----------------------------------------------------------------------------
 
 
-\documentclass[preprint]{sigplanconf}
+\documentclass{sigplanconf}
 
 % The following \documentclass options may be useful:
 %
@@ -53,7 +53,7 @@ numbers=left, numberstyle=\ttfamily\bfseries\footnotesize
 
 \conferenceinfo{PGAS'10}{Oct 12--15, 2010, New York.} 
 \copyrightyear{2010} 
-\copyrightdata{[to be supplied]} 
+%\copyrightdata{[to be supplied]}
 
 %\titlebanner{DistNumPy}        % These are ignored unless
 \preprintfooter{DistNumPy}   % 'preprint' option specified.
@@ -292,9 +292,9 @@ A Newtonian N-body simulation is one that studies how bodies, represented by a m
 
 
 \section{Experiments}
-In this section, we will conduct performance benchmarks on DistNumPy and NumPy\footnote{NumPy version 1.3.0}. We will benchmark the three Python programs presented in Section \ref{sec:examples}. All benchmarks are executed on two different Linux clusters. (Table \ref{tab:specs}).
+In this section, we will conduct performance benchmarks on DistNumPy and NumPy\footnote{NumPy version 1.3.0}. We will benchmark the three Python programs presented in Section \ref{sec:examples}. All benchmarks are executed on two different Linux clusters -- an Intel Core 2 Quad cluster and an Intel Nehalem cluster. Both clusters consist of processors with four CPU-cores, but the number of processors per node differs. Intel Core 2 Quad cluster has one CPU per node whereas the Intel Nehalem cluster has two CPUs per node. The interconnect is Gigabit Ethernet in both clusters. (Table \ref{tab:specs}).
 
-Our experiments consist of a speedup benchmark, which we define as an execution time comparison between a sequential execution with NumPy and a parallelized execution with DistNumPy while the input is identical.
+Our experiments consist of a speedup benchmark, which we define as an execution time comparison between a sequential execution with NumPy and a parallelized execution with DistNumPy while the input is identical. Strong-scaling is used in all benchmarks and the input size is therefore constant.
 
 %To investigate the performance difference between using a single CPU-core and multiple CPU-cores per node, we include speedup graphs that show the two scenarios. 
 
