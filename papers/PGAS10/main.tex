@@ -326,7 +326,7 @@ A Distributed Monte Carlo simulation is embarrassingly parallel and requires a m
 
 The result of the speedup benchmark is illustrated in Figure \ref{fig:MonteCarlo}. We see a close to linear speedup for the Nehalem cluster - a CPU utilization of 88\% is achieved on 64 CPU-cores. The penalty of using multiple CPU-cores per node is noticeable on the Core 2 architecture - a CPU utilization of 68\% is achieved on 32 CPU-cores.
 
-\begin{figure*}%
+\begin{figure*}[t]%
   \begin{center}%
     \subfloat[\label{fig:MonteCarloStrong}]{\includegraphics[width=230px]{gfx/MonteCarloStrong}}
 %    \qquad
@@ -342,7 +342,21 @@ The dominating part of the Jacobi method, performance-wise, is the element-by-el
 
 The result of the speedup benchmark is illustrated in Figure \ref{fig:JacobiScale}. We see a good speedup with 8 CPU-cores and to some degree also with 16 Nehalem CPU-cores. However, the CPU utilization when using more than 16 CPU-cores is very poor. The problem is memory bandwidth - since we use multiple CPU-cores per node when using more than 8 CPU-cores, the aggregated memory bandwidth of the Core 2 cluster does only increase up to 8 CPU-cores. The Nehalem cluster is a bit better because it has two memory buses per node, but using more than 16 CPU-cores will not increase the aggregated memory bandwidth.
 
-\begin{figure*}%
+
+\subsubsection{Profiling of the Jacobi implementation}
+%To get a better picture of the memory bandwidth limitation observed in the Jacobi execution we have profiled the execution (Fig. \ref{fig:JacobiProfiling}). The percentages used with communication increases as expected when the number of CPU-cores increases. However, the profile different between eight CPU-cores and sixteen CPU-cores is minimal, which is due to the limited memory bandwidth. Since each cluster-node makes use of multiple CPU-cores when more than eight CPU-cores are used the memory bandwidth limitation increases the communication time drastically. 
+
+To get a better picture of the execution efficiency the Jacobi execution is profiled by measuring the time used on computation and on communication (Fig. \ref{fig:JacobiProfiling}). As expected the percentages used with communication increases as the number of CPU-cores increases. 
+
+
+%\begin{figure}
+% \centering
+% \includegraphics[width=230px]{gfx/JacobiProfiling}
+% \caption{Profiling of the Jacobi implementation. The figure illustrate the relationship between communication and computation in percentages. }
+% \label{fig:JacobiProfiling}
+%\end{figure}
+
+\begin{figure*}[t]%
   \begin{center}%
     \subfloat[\label{fig:JacobiStrong}]{\includegraphics[width=230px]{gfx/JacobiStrong}}
 %    \qquad
@@ -352,17 +366,15 @@ The result of the speedup benchmark is illustrated in Figure \ref{fig:JacobiScal
   \end{center}
 \end{figure*}
 
-
-\subsubsection{Profiling of the Jacobi implementation}
-To get a better picture of the memory bandwidth limitation observed in the Jacobi execution we have profiled the execution (Fig. \ref{fig:JacobiProfiling}). The percentages used with communication increases as expected when the number of CPU-cores increases. However, the profile different between eight CPU-cores and sixteen CPU-cores is minimal, which is due to the limited memory bandwidth. Since each cluster-node makes use of multiple CPU-cores when more than eight CPU-cores are used the memory bandwidth limitation increases the communication time drastically. 
-
-
-\begin{figure}
- \centering
- \includegraphics[width=230px]{gfx/JacobiProfiling}
- \caption{Profiling of the Jacobi implementation. The figure illustrate the relationship between communication and computation in percentages. }
- \label{fig:JacobiProfiling}
-\end{figure}
+\begin{figure*}[t]%
+  \begin{center}%
+    \subfloat[\label{fig:JacobiProfiling1}]{\includegraphics[width=255px]{gfx/JacobiProfiling}}
+%    \qquad
+    \subfloat[\label{fig:JacobiProfiling2}]{\includegraphics[width=255px]{gfx/JacobiProfiling2}}
+    \caption{Profiling of the Jacobi experiment. The two figures illustrate the relationship between communication and computation when running on the Core 2 Quad architecture (a) and the Nehalem architecture (b), respectively. The area with the check pattern represent MPI communication and the clean area represent computation. Note that these figures relates directly to the Jacobi speedup graph (Fig \ref{fig:JacobiStrong}).}
+    \label{fig:JacobiProfiling}%
+  \end{center}
+\end{figure*}
 
 
 \subsection{Newtonian N-body simulation}
@@ -382,7 +394,9 @@ The result of the speedup benchmark is illustrated in Figure \ref{fig:NbodyScale
 \subsection{Alternative programming language}
 DistNumPy introduces a performance overhead compared to a lower-level programming language such as C/C++ or Fortran. To investigate this overhead we have implemented the Jacobi benchmark in C. The implementation uses the same sequential algorithm as the NumPy and DistNumPy implementations. 
 
-Executions on the both architectures show that DistNumPy and NumPy is roughly 50\% slower than the C implementation when executing the Jacobi method on one CPU-core. This is in rough runtime numbers: 21 seconds for C, 31 seconds for NumPy and 32 seconds for DistNumPy.
+Executions on both architectures show that DistNumPy and NumPy is roughly 50\% slower than the C implementation when executing the Jacobi method on one CPU-core. This is in rough runtime numbers: 21 seconds for C, 31 seconds for NumPy and 32 seconds for DistNumPy.
+
+Obviously highly hand-optimized implementations have a clear performance advantages over DistNumPy. For instance by the use of a highly optimized implementation in C \cite{Kristensen09} demonstrates extreme scalability of a similar Jacobi computation -- an execution by 16384 CPU-cores achieves a CPU utilization of 70\% on a Blue Gene/P architecture. 
 
 \subsection{Summary}
 The benchmarks clearly show that DistNumPy has both good performance and scalability when execution is not bound by the memory bandwidth, which is evident from looking at the CPU utilization when only one CPU-core per node is used. As expected the scalability of the Monte Carlo simulation is better than the Jacobi and the N-body computation because of the reduced communication requirements and more CPU-intensive ufunc operation. 
@@ -412,17 +426,138 @@ We conclude that it is possible to obtain significant speedup with DistNumPy. Ho
 % We recommend abbrvnat bibliography style.
 
 \bibliographystyle{abbrvnat}
-\bibliography{/home/madsbk/repos/priv/diku/phd/paper_archive/main}
-
 
 % The bibliography should be embedded for final submission.
 
-%\begin{thebibliography}{}
-%\softraggedright
+\begin{thebibliography}{18}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
 
-%\bibitem[Smith et~al.(2009)Smith, Jones]{smith02}
-%P. Q. Smith, and X. Y. Jones. ...reference text...
+\bibitem[Anderson et~al.(1990)Anderson, Bai, Dongarra, Greenbaum, McKenney,
+  Du~Croz, Hammerling, Demmel, Bischof, and Sorensen]{lapack90}
+E.~Anderson, Z.~Bai, J.~Dongarra, A.~Greenbaum, A.~McKenney, J.~Du~Croz,
+  S.~Hammerling, J.~Demmel, C.~Bischof, and D.~Sorensen.
+\newblock Lapack: a portable linear algebra library for high-performance
+  computers.
+\newblock In \emph{Supercomputing {'}90: Proceedings of the 1990 ACM/IEEE
+  conference on Supercomputing}, pages 2--11, Los Alamitos, CA, USA, 1990. IEEE
+  Computer Society Press.
+\newblock ISBN 0-89791-412-0.
 
-%\end{thebibliography}
+\bibitem[Blackford(1996)]{Blackford96}
+L.~S. Blackford.
+\newblock Scalapack.
+\newblock In \emph{Proceedings of the 1996 ACM/IEEE conference on
+  Supercomputing (CDROM) - Supercomputing 96 Supercomputing 96}, page~5, 1996.
+\newblock \doi{10.1145/369028.369038}.
+
+\bibitem[Carlson et~al.(1999)Carlson, Draper, Culler, Yelick, Brooks, and
+  Warren]{Carlson99_UPC}
+W.~W. Carlson, J.~M. Draper, D.~Culler, K.~Yelick, E.~Brooks, and K.~Warren.
+\newblock Introduction to upc and language specification.
+\newblock Technical Report CCS-TR-99-157, Bowie, MD, May 1999.
+
+\bibitem[Casanova(2008)]{assignmentNbody}
+H.~Casanova.
+\newblock N-body simulation assignment, Nov 2008.
+\newblock URL
+  \url{http://navet.ics.hawaii.edu/~casanova/courses/ics632_fall08/projects.html}.
+
+\bibitem[Dongarra et~al.(1979)Dongarra, Bunch, Moler, and Stewart]{linpack79}
+J.~Dongarra, J.~Bunch, C.~Moler, and G.~Stewart.
+\newblock Linpack users' guide.
+\newblock \emph{SIAM}, 1, 1979.
+
+\bibitem[Geijn and Watts(1997)]{SUMMA_GeijnW97}
+R.~A. v.~d. Geijn and J.~Watts.
+\newblock Summa: scalable universal matrix multiplication algorithm.
+\newblock \emph{Concurrency - Practice and Experience}, 9\penalty0
+  (4):\penalty0 255--274, 1997.
+
+\bibitem[Gropp et~al.(1994)Gropp, Lusk, and Skjellum]{mpi}
+W.~Gropp, E.~Lusk, and A.~Skjellum.
+\newblock \emph{Using MPI Portable Parallel Programming with the Message
+  Passing Interface}.
+\newblock The MIT Press, 1994.
+
+\bibitem[Guide(1998)]{guide1998mathworks}
+M.~U. Guide.
+\newblock The mathworks.
+\newblock \emph{Inc., Natick, MA}, 5, 1998.
+
+\bibitem[Hill et~al.(2008)Hill, Hambley, Forster, Mewissen, Sloan, Scharinger,
+  Trew, and Ghazal]{Hill08}
+J.~Hill, M.~Hambley, T.~Forster, M.~Mewissen, T.~M. Sloan, F.~Scharinger,
+  A.~Trew, and P.~Ghazal.
+\newblock Sprint: a new parallel framework for r.
+\newblock \emph{BMC Bioinformatics}, 9:\penalty0 558, 2008.
+\newblock \doi{10.1186/1471-2105-9-558}.
+
+\bibitem[Kristensen et~al.(2009)Kristensen, Happe, and Vinter]{Kristensen09}
+M.~R.~B. Kristensen, H.~H. Happe, and B.~Vinter.
+\newblock Gpaw optimized for blue gene/p using hybrid programming.
+\newblock \emph{Parallel and Distributed Processing Symposium, International},
+  2009.
+\newblock \doi{10.1109/IPDPS.2009.5160936}.
+
+\bibitem[Lawson et~al.(1979)Lawson, Hanson, Kincaid, and Krogh]{blas79}
+C.~L. Lawson, R.~J. Hanson, D.~R. Kincaid, and F.~T. Krogh.
+\newblock Basic linear algebra subprograms for fortran usage.
+\newblock \emph{ACM Trans. Math. Softw.}, 5\penalty0 (3):\penalty0 308--323,
+  1979.
+\newblock \doi{10.1145/355841.355847}.
+
+\bibitem[Loveman(1993)]{Loveman93}
+D.~Loveman.
+\newblock High performance fortran.
+\newblock \emph{IEEE Parallel \& Distributed Technology: Systems \&
+  Applications}, 1\penalty0 (1):\penalty0 25, 1993.
+\newblock \doi{10.1109/88.219857}.
+
+\bibitem[Nieplocha et~al.(1996)Nieplocha, Harrison, and
+  Littlefield]{Nieplocha96}
+J.~Nieplocha, R.~J. Harrison, and R.~J. Littlefield.
+\newblock Global arrays: A nonuniform memory access programming model for
+  high-performance computers.
+\newblock \emph{The Journal of Supercomputing}, 10\penalty0 (2), 1996.
+\newblock \doi{10.1007/BF00130708}.
+
+\bibitem[Numrich and Reid(1998)]{Co-arrayFortran98}
+R.~W. Numrich and J.~Reid.
+\newblock Co-array fortran for parallel programming.
+\newblock \emph{SIGPLAN Fortran Forum}, 17\penalty0 (2):\penalty0 1--31, 1998.
+\newblock ISSN 1061-7264.
+\newblock \doi{10.1145/289918.289920}.
+
+\bibitem[Oliphant(2007)]{numpy}
+T.~E. Oliphant.
+\newblock Python for scientific computing.
+\newblock \emph{Computing in Science and Engineering}, 9:\penalty0 10--20,
+  2007.
+\newblock ISSN 1521-9615.
+\newblock \doi{10.1109/MCSE.2007.58}.
+
+\bibitem[P{\'{e}}rez and Granger(2007)]{PER-GRA:2007}
+F.~P{\'{e}}rez and B.~E. Granger.
+\newblock Ipython: a system for interactive scientific computing.
+\newblock \emph{Comput. Sci. Eng.}, 9\penalty0 (3):\penalty0 21--29, may 2007.
+\newblock URL \url{http://ipython.scipy.org}.
+
+\bibitem[Pozo and Miller(2002)]{SciMark}
+R.~Pozo and B.~Miller.
+\newblock Scimark 2.0, 12 2002.
+\newblock URL \url{http://math.nist.gov/scimark2/}.
+
+\bibitem[Prylli and Tourancheau(1997)]{PrylliT97}
+L.~Prylli and B.~Tourancheau.
+\newblock Fast runtime block cyclic data redistribution on multiprocessors.
+\newblock \emph{J. Parallel Distrib. Comput}, 45\penalty0 (1):\penalty0 63--72,
+  1997.
+
+\end{thebibliography}
+
 
 \end{document}
