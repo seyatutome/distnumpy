@@ -1,0 +1,324 @@
+\documentclass{beamer}
+\usetheme{Warsaw}
+\title{Numerical Python for Scalable Architectures}
+\author{Mads Ruben Burgdorff Kristensen \and Brian Vinter}
+\institute{eScience Centre}
+\date{May 12, 2010}
+
+
+\begin{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{Outline}
+\begin{itemize}
+\item Motivation
+\item DistNumPy
+\end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{Motivation -- Workflow}
+\begin{center}
+\includegraphics[width=150px]{../gfx/workflow1}
+\includegraphics[width=150px]{../gfx/workflow2}
+\end{center}
+\begin{itemize}
+\item High Productivity
+  \begin{itemize}
+    \item High-level language such as Matlab, Python/NumPy, etc.
+    \item No compilation
+    \item Interactive
+  \end{itemize}
+\item High Performance
+  \begin{itemize}
+    \item Low-level language such as C, Fortran, etc.
+    \item Compiling to machine code
+    \item Highly Optimized Compilers
+    \item Parallel Programming
+  \end{itemize}
+\end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{Outline}
+\begin{center}
+\begin{Large}
+GPAW
+\end{Large}
+
+\vspace{3px}
+\begin{small}
+A scientific application
+\end{small}
+
+\vspace{30px}
+\begin{Large}
+DistNumPy
+\end{Large}
+
+
+\vspace{3px}
+\begin{small}
+A distributed version of NumPy
+\end{small}
+\end{center}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{DistNumPy}
+\begin{center}
+\begin{Huge}
+DistNumPy
+\end{Huge}
+
+\vspace{7px}
+A distributed version of NumPy
+
+\vspace{25px}
+\begin{scriptsize}
+Ideal workflow -- High Productivity and High Performance
+\end{scriptsize}
+\includegraphics[width=180px]{../gfx/workflow2}
+\end{center}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[fragile]{DistNumPy -- based on NumPy}
+\begin{itemize}
+  \item Python and NumPy is a framework for numerical computation
+  \item Highly Productive -- interactive, interpret, etc
+  \item High Performing when using \emph{Universal Functions}
+\end{itemize}
+\vspace{15px}
+\begin{center}
+\begin{small}
+Monte Carlo $\pi$ simulation
+\end{small}
+\begin{scriptsize}
+\begin{verbatim}
+          from numpy import *
+          S = 1000 #Number of samples
+          (x, y) = (empty([S]), empty([S]))
+          (x, y) = (random(x), random(y))
+          (x, y) = (square(x), square(y))
+          z = (x + y) < 1
+          print add.reduce(z) * 4.0 / S #The result
+\end{verbatim}
+\end{scriptsize}
+\end{center}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[fragile]{Transparent parallelism}
+\begin{itemize}
+  \item DistNumPy introduces a distributed parallel array-backend
+  \item Still sequential programming
+  \item Parallel execution of universal functions
+\end{itemize}
+\vspace{15px}
+\begin{center}
+\begin{small}
+Monte Carlo $\pi$ simulation
+\end{small}
+\begin{scriptsize}
+\begin{verbatim}
+          from numpy import *
+          S = 1000 #Number of samples
+          (x, y) = (empty([S], dist=True), empty([S], dist=True))
+          (x, y) = (random(x), random(y))
+          (x, y) = (square(x), square(y))
+          z = (x + y) < 1
+          print add.reduce(z) * 4.0 / S #The result
+\end{verbatim}
+\end{scriptsize}
+\end{center}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{Data layout}
+\begin{center}
+N-Dimensional Block Cyclic Distribution\vspace{15px}
+
+%\includegraphics[width=250px]{../gfx/scalapackdatalayout}
+\end{center}
+\begin{itemize}
+  \item Used in High Performance Fortran
+  \item Diagonal workflow e.g. Gaussian elimination
+\end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{Views}
+\begin{center}
+Views\vspace{15px}
+
+\includegraphics[width=250px]{../gfx/views}
+\end{center}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{DistNumPy -- Communication}
+\begin{itemize}
+  \item DistNumPy make use of MPI version 2.1
+  \item One-sided, two-sided and collective communication
+  \item Latency hiding by double buffering
+\end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{DistNumPy -- Scalability}
+\begin{center}
+%\begin{small}
+Monte Carlo $\pi$ simulation
+%\end{small}
+
+\vspace{10px}
+\includegraphics[width=160px]{../gfx/MonteCarloStrong}
+\end{center}
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{Scalability}
+\begin{center}
+Hardware\vspace{15px}
+
+
+\end{center}
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{frame}{Scalability -- Jacobi Solver}
+\begin{center}
+%\begin{small}
+Jacobi solver
+%\end{small}
+\end{center}
+
+\begin{columns}
+  \begin{column}{0.5\textwidth}
+  \begin{center}
+    \hspace{21px}Full Cluster
+    \includegraphics[width=160px]{../gfx/JacobiStrong}
+  \end{center}    
+  \end{column}
+  \begin{column}{0.5\textwidth}
+  \begin{center}
+    \hspace{23px}Zoomed in
+    \includegraphics[width=160px]{../gfx/JacobiStrongSMP}
+  \end{center}
+  \end{column}
+\end{columns}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[fragile]{DistNumPy -- Cache Utilization}
+\begin{center}
+Jacobi.py
+\end{center}
+\begin{scriptsize}
+\begin{verbatim}
+              h = zeros(shape(B), float, dist=True)
+              dmax = 1.0
+              AD = A.diagonal()
+              while(dmax > tol):
+                  hnew = h + (B - add.reduce(A * h, 1)) / AD
+                  tmp = absolute((h - hnew) / h)
+                  dmax = maximum.reduce(tmp)
+                  h = hnew
+              print h #The result
+\end{verbatim}
+\end{scriptsize}
+
+\begin{itemize}
+  \item One universal function at a time
+  \item Poor cache utilization -- arrays are traversed multiple times
+\end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[fragile]{DistNumPy -- Cache Utilization}
+\begin{center}
+N-body simulation
+\end{center}
+\begin{scriptsize}
+\begin{verbatim}
+for i in range(k):
+    Fx = dot(OnesCol, PxT) - dot(Px, OnesRow)
+    Dsq = Fx * Fx + Fy * Fy + Fx * Fz + Identity
+    D = sqrt(Dsq)
+    #mutual forces between all pairs of objects
+    F = G * dot(M, MT) / Dsq   
+    F = F - diag(diag(F))#set 'self attraction' to 0
+    Fx = (Fx / D) * F   
+    #net force on each body
+    Fnet_x = add.reduce(Fx,1)
+    Fnet_x = Fnet_x[:,newaxis]
+    Fnet_x *= dT
+    #change in velocity:
+    Vx += Fnet_x / M
+    #change in position
+    Px += Vx * dT
+\end{verbatim}
+\end{scriptsize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{DistNumPy -- Scalability}
+\begin{center}
+%\begin{small}
+N-body simulation
+%\end{small}
+\end{center}
+
+\begin{columns}
+  \begin{column}{0.5\textwidth}
+  \begin{center}
+    \hspace{21px}Full Cluster
+    \includegraphics[width=160px]{../gfx/NbodyStrong}
+  \end{center}    
+  \end{column}
+  \begin{column}{0.5\textwidth}
+  \begin{center}
+    \hspace{23px}Zoomed in
+    \includegraphics[width=160px]{../gfx/NbodyStrongSMP}
+  \end{center}
+  \end{column}
+\end{columns}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{DistNumPy -- Summary}
+\begin{itemize}
+  \item Fully transparent data distribution
+  \item Fully transparent parallel execution
+  \item However, the use of Universal Functions is required
+  \item DistNumPy running Jacobi is roughly 50\% slower than the C
+  \begin{itemize}  
+    \item 21 seconds for C
+    \item 31 seconds for NumPy
+    \item 32 seconds for DistNumPy
+  \end{itemize}
+\end{itemize}
+\end{frame}
+
+
+\end{document}
