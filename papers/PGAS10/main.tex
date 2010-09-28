@@ -159,8 +159,10 @@ DistNumPy is a new version of NumPy that parallelizes array operations in a mann
 The only difference in the API of NumPy and DistNumPy is the array creation routines. DistNumPy allow both distributed and non-distributed arrays to co-exist thus the user must specify, as an optional parameter, if the array should be distributed. The following illustrates the only difference between the creation of a standard array and a distributed array:
 \lstset{frame=none, xleftmargin=0mm, numbers=none}
 \begin{lstlisting}
-A = numpy.array([1,2,3])#Non-Distributed
-B = numpy.array([1,2,3], dist=True)#Distributed
+#Non-Distributed
+A = numpy.array([1,2,3])
+#Distributed
+B = numpy.array([1,2,3], dist=True)
 \end{lstlisting}
 \lstset{frame=single, xleftmargin=5mm, numbers=left}
 
@@ -344,9 +346,9 @@ The result of the speedup benchmark is illustrated in Figure \ref{fig:JacobiScal
 
 
 \subsubsection{Profiling of the Jacobi implementation}
-%To get a better picture of the memory bandwidth limitation observed in the Jacobi execution we have profiled the execution (Fig. \ref{fig:JacobiProfiling}). The percentages used with communication increases as expected when the number of CPU-cores increases. However, the profile different between eight CPU-cores and sixteen CPU-cores is minimal, which is due to the limited memory bandwidth. Since each cluster-node makes use of multiple CPU-cores when more than eight CPU-cores are used the memory bandwidth limitation increases the communication time drastically. 
+To get a better picture of the memory bandwidth limitation observed in the Jacobi execution we have profiled the execution (Fig. \ref{fig:JacobiProfiling}). As expected the result shows that the percentages used with communication increases when the number of CPU-cores increases. However, the profile different between eight CPU-cores and sixteen CPU-cores is minimal, which is due to the limited memory bandwidth. Since each node makes use of multiple CPU-cores when more than eight CPU-cores are used the memory bandwidth limitation increases the computation time. Still, because of the decreasing total running time and the fact that the communication time is constant when all eight nodes are in use, the percentages used with communication increases at 32 and 64 CPU-cores.
 
-To get a better picture of the execution efficiency the Jacobi execution is profiled by measuring the time used on computation and on communication (Fig. \ref{fig:JacobiProfiling}). As expected the percentages used with communication increases as the number of CPU-cores increases. 
+%To get a better picture of the execution efficiency the Jacobi execution is profiled by measuring the time used on computation and on communication (Fig. \ref{fig:JacobiProfiling}). As expected the percentages used with communication increases as the number of CPU-cores increases. 
 
 
 %\begin{figure}
@@ -356,7 +358,7 @@ To get a better picture of the execution efficiency the Jacobi execution is prof
 % \label{fig:JacobiProfiling}
 %\end{figure}
 
-\begin{figure*}[t]%
+\begin{figure*}[p]%
   \begin{center}%
     \subfloat[\label{fig:JacobiStrong}]{\includegraphics[width=230px]{gfx/JacobiStrong}}
 %    \qquad
@@ -366,12 +368,12 @@ To get a better picture of the execution efficiency the Jacobi execution is prof
   \end{center}
 \end{figure*}
 
-\begin{figure*}[t]%
+\begin{figure*}[p]%
   \begin{center}%
-    \subfloat[\label{fig:JacobiProfiling1}]{\includegraphics[width=255px]{gfx/JacobiProfiling}}
+    \subfloat[\label{fig:JacobiProfiling1}]{\includegraphics[width=250px]{gfx/JacobiProfiling}}
 %    \qquad
-    \subfloat[\label{fig:JacobiProfiling2}]{\includegraphics[width=255px]{gfx/JacobiProfiling2}}
-    \caption{Profiling of the Jacobi experiment. The two figures illustrate the relationship between communication and computation when running on the Core 2 Quad architecture (a) and the Nehalem architecture (b), respectively. The area with the check pattern represent MPI communication and the clean area represent computation. Note that these figures relates directly to the Jacobi speedup graph (Fig \ref{fig:JacobiStrong}).}
+    \subfloat[\label{fig:JacobiProfiling2}]{\includegraphics[width=250px]{gfx/JacobiProfiling2}}
+    \caption{Profiling of the Jacobi experiment. The two figures illustrate the relationship between communication and computation when running on the Core 2 Quad architecture (a) and the Nehalem architecture (b). The area with the check pattern represent MPI communication and the clean area represent computation. Note that these figures relates directly to the Jacobi speedup graph (Fig \ref{fig:JacobiStrong}).}
     \label{fig:JacobiProfiling}%
   \end{center}
 \end{figure*}
