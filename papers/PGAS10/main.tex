@@ -154,7 +154,7 @@ NumPy makes use of the numerical library Basic Linear Algebra Subprograms (BLAS)
 
 
 \section{DistNumPy}
-DistNumPy is a new version of NumPy that parallelizes array operations in a manner completely transparent to the user - from the perspective of the user, the difference between NumPy and DistNumPy is minimal. DistNumPy can use multiple processors through the communication library Message Passing Interface (MPI)\cite{mpi}. However, we have chosen not to follow the standard MPI approach in which the same user-program is executed on all MPI-processes. This is because the standard MPI approach requires the user to differentiate between the MPI-processes, e.g. sequential areas in the user-program must be guarded with a branch based on the MPI-rank of the process. In DistNumPy MPI communication must be fully transparent and the user needs no knowledge of MPI or any parallel programming model. However, the user is required to use the array operations in DistNumPy to obtain any kind of speedup. We think this is a reasonable requirement since it is also required by NumPy.
+DistNumPy is a new version of NumPy that parallelizes array operations in a manner completely transparent to the user -- from the perspective of the user, the difference between NumPy and DistNumPy is minimal. DistNumPy can use multiple processors through the communication library Message Passing Interface (MPI)\cite{mpi}. However, we have chosen not to follow the standard MPI approach in which the same user-program is executed on all MPI-processes. This is because the standard MPI approach requires the user to differentiate between the MPI-processes, e.g. sequential areas in the user-program must be guarded with a branch based on the MPI-rank of the process. In DistNumPy MPI communication must be fully transparent and the user needs no knowledge of MPI or any parallel programming model. However, the user is required to use the array operations in DistNumPy to obtain any kind of speedup. We think this is a reasonable requirement since it is also required by NumPy.
 
 The only difference in the API of NumPy and DistNumPy is the array creation routines. DistNumPy allow both distributed and non-distributed arrays to co-exist thus the user must specify, as an optional parameter, if the array should be distributed. The following illustrates the only difference between the creation of a standard array and a distributed array:
 \lstset{frame=none, xleftmargin=0mm, numbers=none}
@@ -168,7 +168,7 @@ B = numpy.array([1,2,3], dist=True)
 
 
 \subsection{Interfaces}
-There are two programming interfaces in NumPy - one in Python and one in C. We aim to support the complete Python interface and a great subset of the C interface. However, the part of the C interface that involves direct access to low level data structures will not be supported. It is not feasible to return a C-pointer that represents the elements in a distributed array.
+There are two programming interfaces in NumPy -- one in Python and one in C. We aim to support the complete Python interface and a great subset of the C interface. However, the part of the C interface that involves direct access to low level data structures will not be supported. It is not feasible to return a C-pointer that represents the elements in a distributed array.
 
 
 \subsection{Data layout}
@@ -316,7 +316,6 @@ Number of nodes & 8 & 8\\
 Network & Gigabit Ethernet & Gigabit Ethernet\\
 \hline
 \end{tabular}
-
 \label{tab:specs}
 \end{table}
 %Core 2 Quad: http://ark.intel.com/Product.aspx?id=35365
@@ -326,7 +325,7 @@ Network & Gigabit Ethernet & Gigabit Ethernet\\
 \subsection{Monte Carlo simulation}
 A Distributed Monte Carlo simulation is embarrassingly parallel and requires a minimum of communication.  This is also the case when using DistNumPy because ufuncs are only applied on identically shaped arrays and it is therefore the simplest ufunc scenario. Additionally, the implementation is CPU-intensive because a complex ufunc is used as random number generator. 
 
-The result of the speedup benchmark is illustrated in Figure \ref{fig:MonteCarlo}. We see a close to linear speedup for the Nehalem cluster - a CPU utilization of 88\% is achieved on 64 CPU-cores. The penalty of using multiple CPU-cores per node is noticeable on the Core 2 architecture - a CPU utilization of 68\% is achieved on 32 CPU-cores.
+The result of the speedup benchmark is illustrated in Figure \ref{fig:MonteCarlo}. We see a close to linear speedup for the Nehalem cluster -- a CPU utilization of 88\% is achieved on 64 CPU-cores. The penalty of using multiple CPU-cores per node is noticeable on the Core 2 architecture -- a CPU utilization of 68\% is achieved on 32 CPU-cores.
 
 \begin{figure*}[t]%
   \begin{center}%
@@ -342,11 +341,13 @@ The result of the speedup benchmark is illustrated in Figure \ref{fig:MonteCarlo
 \subsection{Jacobi method}
 The dominating part of the Jacobi method, performance-wise, is the element-by-element multiplication of \texttt{A} and \texttt{h} (Fig. \ref{lst:jocobi} line 5). It consists of $O(n^2)$ operations where as all the other operations only consist $O(n)$ operations. Since scalar-multiplication is a very simple operation, the dominating ufunc in the implementation is memory-intensive.
 
-The result of the speedup benchmark is illustrated in Figure \ref{fig:JacobiScale}. We see a good speedup with 8 CPU-cores and to some degree also with 16 Nehalem CPU-cores. However, the CPU utilization when using more than 16 CPU-cores is very poor. The problem is memory bandwidth - since we use multiple CPU-cores per node when using more than 8 CPU-cores, the aggregated memory bandwidth of the Core 2 cluster does only increase up to 8 CPU-cores. The Nehalem cluster is a bit better because it has two memory buses per node, but using more than 16 CPU-cores will not increase the aggregated memory bandwidth.
+The result of the speedup benchmark is illustrated in Figure \ref{fig:JacobiScale}. We see a good speedup with 8 CPU-cores and to some degree also with 16 Nehalem CPU-cores. However, the CPU utilization when using more than 16 CPU-cores is very poor. The problem is memory bandwidth -- since we use multiple CPU-cores per node when using more than 8 CPU-cores, the aggregated memory bandwidth of the Core 2 cluster does only increase up to 8 CPU-cores. The Nehalem cluster is a bit better because it has two memory buses per node, but using more than 16 CPU-cores will not increase the aggregated memory bandwidth.
 
 
 \subsubsection{Profiling of the Jacobi implementation}
-To get a better picture of the memory bandwidth limitation observed in the Jacobi execution we have profiled the execution (Fig. \ref{fig:JacobiProfiling}). As expected the result shows that the percentages used with communication increases when the number of CPU-cores increases. However, the profile different between eight CPU-cores and sixteen CPU-cores is minimal, which is due to the limited memory bandwidth. Since each node makes use of multiple CPU-cores when more than eight CPU-cores are used the memory bandwidth limitation increases the computation time. Still, because of the decreasing total running time and the fact that the communication time is constant when all eight nodes are in use, the percentages used with communication increases at 32 and 64 CPU-cores.
+To investigate the memory bandwidth limitation observed in the Jacobi execution we have profiled the execution by measuring the time spend on computation and communication (Fig. \ref{fig:JacobiProfiling}). As expected the result shows that the percentages used with communication increases when the number of CPU-cores increases. Furthermore, a noteworthy observation is the almost identical communication overhead at eight CPU-cores and sixteen CPU-cores. This is due the change from a single CPU-core per node to multiple CPU-cores per node. At sixteen CPU-cores half of the communication is performed through the use of shared memory, which means that the communication, just like the computation, is bound by the limited memory bandwidth.
+
+%To get a better picture of the memory bandwidth limitation observed in the Jacobi execution we have profiled the execution (Fig. \ref{fig:JacobiProfiling}). As expected the result shows that the percentages used with communication increases when the number of CPU-cores increases. However, the profile different between eight CPU-cores and sixteen CPU-cores is minimal, which is due to the limited memory bandwidth. Since each node makes use of multiple CPU-cores when executing on more than eight CPU-cores the memory bandwidth limitation increases the computation time. Because of the decreasing total running time and the fact that the amount of communication is constant when all eight nodes are in use, the percentages used with communication increases at 32 and 64 CPU-cores.
 
 %To get a better picture of the execution efficiency the Jacobi execution is profiled by measuring the time used on computation and on communication (Fig. \ref{fig:JacobiProfiling}). As expected the percentages used with communication increases as the number of CPU-cores increases. 
 
@@ -546,7 +547,6 @@ T.~E. Oliphant.
 F.~P{\'{e}}rez and B.~E. Granger.
 \newblock Ipython: a system for interactive scientific computing.
 \newblock \emph{Comput. Sci. Eng.}, 9\penalty0 (3):\penalty0 21--29, may 2007.
-\newblock URL \url{http://ipython.scipy.org}.
 
 \bibitem[Pozo and Miller(2002)]{SciMark}
 R.~Pozo and B.~Miller.

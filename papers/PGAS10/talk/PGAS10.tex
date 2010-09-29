@@ -2,18 +2,23 @@
 \usetheme{Warsaw}
 \title{Numerical Python for Scalable Architectures}
 \author{Mads Ruben Burgdorff Kristensen \and Brian Vinter}
-\institute{eScience Centre}
+\institute{eScience Centre\\ University of Copenhagen\\ Denmark\\ madsbk@diku.dk/vinter@diku.dk}
 \date{May 12, 2010}
 
 
 \begin{document}
+\begin{frame}
+\titlepage
+\end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{frame}{Outline}
 \begin{itemize}
 \item Motivation
+\item NumPy
 \item DistNumPy
+\item Benchmarks
 \end{itemize}
 \end{frame}
 
@@ -43,27 +48,46 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{frame}{Outline}
+\begin{frame}{NumPy}
 \begin{center}
 \begin{Large}
-GPAW
+Numerical Python
 \end{Large}
+\end{center}
+\begin{itemize}
+  \item Framework similar to Matlab
+  \item Good performance by the use of vectorized operations
+\end{itemize}
 
-\vspace{3px}
-\begin{small}
-A scientific application
-\end{small}
+\end{frame}
 
-\vspace{30px}
-\begin{Large}
-DistNumPy
-\end{Large}
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\begin{frame}[fragile]{Vectorization}
+\begin{scriptsize}
+\begin{verbatim}
+     #C
+     for(i = 0; i < rows; i++)
+         c[i] = a[i]*b[i];
 
-\vspace{3px}
-\begin{small}
-A distributed version of NumPy
-\end{small}
+     #Python
+     c = []
+     for i in range(len(a)):
+         c.append(a[i]*b[i])
+
+     #NumPy
+     c = a * b
+\end{verbatim}
+\end{scriptsize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{Broadcast}
+\begin{center}
+Broadcast\vspace{15px}
+
+\includegraphics[width=100px]{../gfx/ufunc_broadcast}
 \end{center}
 \end{frame}
 
@@ -193,36 +217,25 @@ Monte Carlo $\pi$ simulation
 \begin{frame}{Scalability}
 \begin{center}
 Hardware\vspace{15px}
-
-
 \end{center}
 
-\end{frame}
+\begin{table}
+\caption{Hardware specifications}
+\centering
+\begin{tabular}{|lll|}
+\hline
+CPU & Core 2 Quad & Nehalem\\
+CPU Frequency & 2.26 GHz & 2.66 GHz\\
+CPU per node & 1 & 2\\
+Cores per CPU & 4 & 4\\
+Memory per node & 8 GB @ 6.5 GB/s & 24 GB @ 25.6 GB/s\\
+Number of nodes & 8 & 8\\
+Network & Gigabit Ethernet & Gigabit Ethernet\\
+\hline
+\end{tabular}
+\label{tab:specs}
+\end{table}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-\begin{frame}{Scalability -- Jacobi Solver}
-\begin{center}
-%\begin{small}
-Jacobi solver
-%\end{small}
-\end{center}
-
-\begin{columns}
-  \begin{column}{0.5\textwidth}
-  \begin{center}
-    \hspace{21px}Full Cluster
-    \includegraphics[width=160px]{../gfx/JacobiStrong}
-  \end{center}    
-  \end{column}
-  \begin{column}{0.5\textwidth}
-  \begin{center}
-    \hspace{23px}Zoomed in
-    \includegraphics[width=160px]{../gfx/JacobiStrongSMP}
-  \end{center}
-  \end{column}
-\end{columns}
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -244,11 +257,56 @@ Jacobi.py
               print h #The result
 \end{verbatim}
 \end{scriptsize}
+\end{frame}
 
-\begin{itemize}
-  \item One universal function at a time
-  \item Poor cache utilization -- arrays are traversed multiple times
-\end{itemize}
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{Scalability -- Jacobi Solver}
+\begin{center}
+%\begin{small}
+Jacobi solver
+%\end{small}
+\end{center}
+
+\begin{columns}
+  \begin{column}{0.5\textwidth}
+  \begin{center}
+    \hspace{21px}Full Cluster
+    \includegraphics[width=160px]{../gfx/JacobiStrong}
+  \end{center}
+  \end{column}
+  \begin{column}{0.5\textwidth}
+  \begin{center}
+    \hspace{23px}Zoomed in
+    \includegraphics[width=160px]{../gfx/JacobiStrongSMP}
+  \end{center}
+  \end{column}
+\end{columns}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{Scalability -- Jacobi Solver}
+\begin{center}
+%\begin{small}
+Profiling
+%\end{small}
+\end{center}
+
+\begin{columns}
+  \begin{column}{0.5\textwidth}
+  \begin{center}
+    \hspace{21px}
+    \includegraphics[width=160px]{../gfx/JacobiProfiling}
+  \end{center}
+  \end{column}
+  \begin{column}{0.5\textwidth}
+  \begin{center}
+    \hspace{23px}
+    \includegraphics[width=160px]{../gfx/JacobiProfiling2}
+  \end{center}
+  \end{column}
+\end{columns}
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -264,9 +322,9 @@ for i in range(k):
     Dsq = Fx * Fx + Fy * Fy + Fx * Fz + Identity
     D = sqrt(Dsq)
     #mutual forces between all pairs of objects
-    F = G * dot(M, MT) / Dsq   
+    F = G * dot(M, MT) / Dsq
     F = F - diag(diag(F))#set 'self attraction' to 0
-    Fx = (Fx / D) * F   
+    Fx = (Fx / D) * F
     #net force on each body
     Fnet_x = add.reduce(Fx,1)
     Fnet_x = Fnet_x[:,newaxis]
@@ -293,7 +351,7 @@ N-body simulation
   \begin{center}
     \hspace{21px}Full Cluster
     \includegraphics[width=160px]{../gfx/NbodyStrong}
-  \end{center}    
+  \end{center}
   \end{column}
   \begin{column}{0.5\textwidth}
   \begin{center}
@@ -312,7 +370,7 @@ N-body simulation
   \item Fully transparent parallel execution
   \item However, the use of Universal Functions is required
   \item DistNumPy running Jacobi is roughly 50\% slower than the C
-  \begin{itemize}  
+  \begin{itemize}
     \item 21 seconds for C
     \item 31 seconds for NumPy
     \item 32 seconds for DistNumPy
