@@ -16,7 +16,8 @@
 \begin{frame}{Outline}
 \begin{itemize}
 \item Motivation
-\item NumPy
+\item Python
+\item Numerical Python (NumPy)
 \item DistNumPy
 \item Benchmarks
 \end{itemize}
@@ -32,7 +33,7 @@
 \begin{itemize}
 \item High Productivity
   \begin{itemize}
-    \item High-level language such as Matlab, Python/NumPy, etc.
+    \item High-level language
     \item No compilation
     \item Interactive
   \end{itemize}
@@ -48,45 +49,76 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{frame}{NumPy}
+\begin{frame}{Python}
 \begin{center}
 \begin{Large}
-Numerical Python
+Python
 \end{Large}
 \end{center}
 \begin{itemize}
-  \item Framework similar to Matlab
-  \item Good performance by the use of vectorized operations
+\item General-purpose high-level programming language
+\item The design philosophy emphasizes code readability.
+\item Sacrificing performance over productivity
+%\item Commenly used for: ad-hoc programming, prototyping 
+\item Gluing libraries together
 \end{itemize}
-
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{frame}[fragile]{Vectorization}
+\begin{frame}[fragile]{Numerical Python}
+\begin{center}
+\begin{Large}
+Numerical Python (NumPy)
+\end{Large}
+\end{center}
+\begin{itemize}
+  \item Framework for numerical computation similar to Matlab
+  \item Introduces efficient arrays and a lot of useful array operations
+\begin{itemize}
+  \item Linear algebra functions
+  \item Fourier transforms
+  \item Random number arrays  
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[fragile]{Universal Functions}
+\begin{center}
+Vectorized operations called Universal Functions
+\end{center}
 \begin{scriptsize}
 \begin{verbatim}
-     #C
-     for(i = 0; i < rows; i++)
-         c[i] = a[i]*b[i];
 
-     #Python
-     c = []
-     for i in range(len(a)):
-         c.append(a[i]*b[i])
-
-     #NumPy
-     c = a * b
+         #C                                #Python
+         for(i = 0; i < rows; i++)         c = []
+             c[i] = a[i] + b[i];             for i in range(len(a)):
+                                               c.append(a[i] + b[i])
+         #NumPy
+         c = a + b
 \end{verbatim}
 \end{scriptsize}
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{frame}{Broadcast}
+\begin{frame}[fragile]{Broadcast}
 \begin{center}
-Broadcast\vspace{15px}
-
+Broadcasting makes vectorization more flexible
+\end{center}
+\begin{scriptsize}
+\begin{verbatim}
+                        #No broadcast
+                        for i in range(len(A)):
+                            c[i] = a[i] + b
+                  
+                        #Broadcast
+                        c = a + b
+\end{verbatim}
+\end{scriptsize}
+\begin{center}
 \includegraphics[width=100px]{../gfx/ufunc_broadcast}
 \end{center}
 \end{frame}
@@ -105,34 +137,6 @@ A distributed version of NumPy
 \vspace{25px}
 \begin{scriptsize}
 Ideal workflow -- High Productivity and High Performance
-\end{scriptsize}
-\includegraphics[width=180px]{../gfx/workflow2}
-\end{center}
-\end{frame}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\begin{frame}[fragile]{DistNumPy -- based on NumPy}
-\begin{itemize}
-  \item Python and NumPy is a framework for numerical computation
-  \item Highly Productive -- interactive, interpret, etc
-  \item High Performing when using \emph{Universal Functions}
-\end{itemize}
-\vspace{15px}
-\begin{center}
-\begin{small}
-Monte Carlo $\pi$ simulation
-\end{small}
-\begin{scriptsize}
-\begin{verbatim}
-          from numpy import *
-          S = 1000 #Number of samples
-          (x, y) = (empty([S]), empty([S]))
-          (x, y) = (random(x), random(y))
-          (x, y) = (square(x), square(y))
-          z = (x + y) < 1
-          print add.reduce(z) * 4.0 / S #The result
-\end{verbatim}
 \end{scriptsize}
 \end{center}
 \end{frame}
@@ -166,11 +170,21 @@ Monte Carlo $\pi$ simulation
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%\begin{frame}{Views}
+%\begin{center}
+%Views\vspace{15px}
+
+%\includegraphics[width=250px]{../gfx/views}
+%\end{center}
+%\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \begin{frame}{Data layout}
 \begin{center}
 N-Dimensional Block Cyclic Distribution\vspace{15px}
 
-%\includegraphics[width=250px]{../gfx/scalapackdatalayout}
+\includegraphics[width=250px]{../gfx/datalayout}
 \end{center}
 \begin{itemize}
   \item Used in High Performance Fortran
@@ -180,17 +194,7 @@ N-Dimensional Block Cyclic Distribution\vspace{15px}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{frame}{Views}
-\begin{center}
-Views\vspace{15px}
-
-\includegraphics[width=250px]{../gfx/views}
-\end{center}
-\end{frame}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\begin{frame}{DistNumPy -- Communication}
+\begin{frame}{Communication}
 \begin{itemize}
   \item DistNumPy make use of MPI version 2.1
   \item One-sided, two-sided and collective communication
@@ -200,23 +204,9 @@ Views\vspace{15px}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{frame}{DistNumPy -- Scalability}
+\begin{frame}{Benchmarks -- Hardware}
 \begin{center}
-%\begin{small}
-Monte Carlo $\pi$ simulation
-%\end{small}
-
-\vspace{10px}
-\includegraphics[width=160px]{../gfx/MonteCarloStrong}
-\end{center}
-
-\end{frame}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\begin{frame}{Scalability}
-\begin{center}
-Hardware\vspace{15px}
+%Hardware\vspace{15px}
 \end{center}
 
 \begin{table}
@@ -235,12 +225,30 @@ Network & Gigabit Ethernet & Gigabit Ethernet\\
 \end{tabular}
 \label{tab:specs}
 \end{table}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{Scalability}
+\begin{center}
+%\begin{small}
+Monte Carlo $\pi$ simulation
+%\end{small}
+
+\vspace{10px}
+\includegraphics[width=160px]{../gfx/MonteCarloStrong}
+\vspace{3px}
+
+\begin{scriptsize}
+Nehalem -- CPU utilization of 88\% on 64 CPU-cores
+\end{scriptsize}
+\end{center}
 
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{frame}[fragile]{DistNumPy -- Cache Utilization}
+\begin{frame}[fragile]{Jacobi solver}
 \begin{center}
 Jacobi.py
 \end{center}
@@ -262,31 +270,30 @@ Jacobi.py
 %%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{frame}{Scalability -- Jacobi Solver}
-\begin{center}
-%\begin{small}
-Jacobi solver
-%\end{small}
-\end{center}
-
+\begin{scriptsize}
 \begin{columns}
   \begin{column}{0.5\textwidth}
   \begin{center}
     \hspace{21px}Full Cluster
-    \includegraphics[width=160px]{../gfx/JacobiStrong}
+    \includegraphics[width=150px]{../gfx/JacobiStrong}
   \end{center}
   \end{column}
   \begin{column}{0.5\textwidth}
   \begin{center}
     \hspace{23px}Zoomed in
-    \includegraphics[width=160px]{../gfx/JacobiStrongSMP}
+    \includegraphics[width=150px]{../gfx/JacobiStrongSMP}
   \end{center}
   \end{column}
 \end{columns}
+\begin{center}
+Nehalem -- CPU utilization of 85\% on 16 CPU-cores and 50\% on 64 CPU-cores
+\end{center}
+\end{scriptsize}
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{frame}{Scalability -- Jacobi Solver}
+\begin{frame}{Jacobi solver profiling}
 \begin{center}
 %\begin{small}
 Profiling
@@ -296,14 +303,12 @@ Profiling
 \begin{columns}
   \begin{column}{0.5\textwidth}
   \begin{center}
-    \hspace{21px}
-    \includegraphics[width=160px]{../gfx/JacobiProfiling}
+    \includegraphics[width=150px]{../gfx/JacobiProfiling}
   \end{center}
   \end{column}
   \begin{column}{0.5\textwidth}
   \begin{center}
-    \hspace{23px}
-    \includegraphics[width=160px]{../gfx/JacobiProfiling2}
+    \includegraphics[width=150px]{../gfx/JacobiProfiling2}
   \end{center}
   \end{column}
 \end{columns}
@@ -311,7 +316,7 @@ Profiling
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{frame}[fragile]{DistNumPy -- Cache Utilization}
+\begin{frame}[fragile]{N-body simulation}
 \begin{center}
 N-body simulation
 \end{center}
@@ -339,32 +344,31 @@ for i in range(k):
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{frame}{DistNumPy -- Scalability}
-\begin{center}
-%\begin{small}
-N-body simulation
-%\end{small}
-\end{center}
-
+\begin{frame}{Scalability -- N-body simulation}
+\begin{scriptsize}
 \begin{columns}
   \begin{column}{0.5\textwidth}
   \begin{center}
     \hspace{21px}Full Cluster
-    \includegraphics[width=160px]{../gfx/NbodyStrong}
+    \includegraphics[width=150px]{../gfx/NbodyStrong}
   \end{center}
   \end{column}
   \begin{column}{0.5\textwidth}
   \begin{center}
     \hspace{23px}Zoomed in
-    \includegraphics[width=160px]{../gfx/NbodyStrongSMP}
+    \includegraphics[width=150px]{../gfx/NbodyStrongSMP}
   \end{center}
   \end{column}
 \end{columns}
+\begin{center}
+Nehalem -- CPU utilization of 91\% on 16 CPU-cores and 63\% on 64 CPU-cores
+\end{center}
+\end{scriptsize}
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%% FRAME %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{frame}{DistNumPy -- Summary}
+\begin{frame}{Summary}
 \begin{itemize}
   \item Fully transparent data distribution
   \item Fully transparent parallel execution
