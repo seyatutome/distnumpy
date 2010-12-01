@@ -40,11 +40,8 @@
 
 %% if you use PostScript figures in your article
 %% use the graphics package for simple commands
- \usepackage{graphics}
-%% or use the graphicx package for more complicated commands
-%% \usepackage{graphicx}
-%% or use the epsfig package if you prefer to use the old commands
-%% \usepackage{epsfig}
+\usepackage{graphicx}
+\DeclareGraphicsExtensions{.eps, .ps}
 
 %% The amssymb package provides various useful mathematical symbols
 \usepackage{amssymb}
@@ -139,7 +136,9 @@ GPAW \sep HPC \sep Hybrid-programming \sep multicore platforms
 % \linenumbers
 
 \section{Introduction}
-Grid Based Projector Augmented Wave (GPAW)\cite{Mortensen05} is a simulation software, which simulates many-body systems at the sub-atomic level. GPAW is primarily used by physicists and chemists to investigate the electronic structure, principally the ground state, of many-body systems. A significant part of a GPAW computation consists of a distributed stencil operation. The main object of this paper is to optimize this stencil operation on the Blue Gene/P\cite{BGPoverview} (BGP).
+Grid Based Projector Augmented Wave (GPAW)\cite{Mortensen05} is a simulation software, which simulates many-body systems at the sub-atomic level. GPAW is primarily used by physicists and chemists to investigate the electronic structure, principally the ground state, of many-body systems. The GPAW users often have a desire to increase the system size and resolution to the point where the simulation time escalates to weeks and sometimes even months. A massively parallel implementation of GPAW, which is able to fully utilize a supercomputer, is therefore highly desirable.
+
+The performance profile of GPAW dependence almost entirely on the electronic structures that are being simulated and it is therefore difficult to measure the general performance of GPAW. However, a significant part of any GPAW computation consists of a distributed stencil operation and an optimization of this operation will therefore result in an improvement of the general performance of GPAW. The main object of this paper is to optimize this stencil operation for the Blue Gene/P\cite{BGPoverview} (BGP) architecture.
 
 The current trend in HPC hardware is towards systems of shared-memory computation nodes. The BGP also follows this trend and consists of four CPU-cores per node. Furthermore it is quite possible that future versions of the Blue Gene architecture will consists of even more CPU-cores per node.
 
@@ -179,7 +178,7 @@ A'_{x,y,z} &= C_1 A_{x,y,z} + C_2 A_{x-1,y,z} + C_3 A_{x+1,y,z} +\\
 \end{array}
 \end{displaymath}
 
-\section{Blue Gene/P}
+\section{Blue Gene/P}\label{sec:gpaw}
 % An example of a floating table. Note that, for IEEE style tables, the 
 % \caption command should come BEFORE the table. Table text will default to
 % \footnotesize as IEEE normally uses this smaller font for tables.
@@ -251,9 +250,9 @@ The parallel version of GPAW uses MPI in a flat programming model and the parall
 The grids are simply divided into a number of quadrilaterals matching the number of available MPI processes. If no user-defined domain decomposition is present, GPAW will try to minimize the aggregated surface of the quadrilaterals. A real-space grid is represented as a three dimensional array where every point in the grid can be a real or complex number (8 or 16 bytes)
 
 \subsection{Distributed Stencil Operation}
-Generally, it should be easy to obtain good scalability for a distributed stencil operation since computation grows faster than communication. If we look at a 3D grid of size $n \times n \times n$ the aggregated computation is $O\left(n^3\right)$ where as the aggregated communication is only $O\left(n^2\right)$. The operation should scale very well when $n$ grows at the same rate as the number of CPUs.
+Generally, it should be easy to obtain good scalability for a distributed stencil operation since computation grows faster than communication. If we look at a 3D grid of size $n \times n \times n$ the aggregated computation is $O\left(n^3\right)$ where as the aggregated communication is only $O\left(n^2\right)$. The operation should scale very well when $n$ grows at the same rate as the number of CPUs. In GPAW, however, scalability is very hard to obtain since the grid size will ordinarily not exceed $200^3$. Thus, the $n$ is smaller than $200$ even when parallelizing over thousands of CPUs.
 
-In GPAW, however, scalability is very hard to obtain since the grid size will ordinarily not exceed $200^3$. Furthermore, since GPAW requires that every MPI process gets the same subset of every grid, it is hard to take advantage of the fact that the number of grids grows at the same pace as the CPUs.
+The fact that the number of grids grows at the same pace as the CPUs would normally make the problem embarrassingly parallel. Since no communication between grids is required in GPAW, each MPI process could compute a whole grid without the need of any communication. However, this is not possible since GPAW requires that every MPI process gets the same subset of every grid (Figure \ref{fig:wavedist}).
 
 One feature in GPAW, which makes it easier to parallelize, is the fact that the input grid and the output grid used in the stencil operation is always two separate grids. We need therefore not consider the order in which the grid-points are computed.
 
@@ -315,7 +314,32 @@ An way to ensure critical packet size is to pack real-space grids into batches; 
 
 Continuously dividing the grids between more and more MPI processes reduces the number of surface points in a single sub-grid. That is, at some point the amount of data send by a single MPI call will be reduced to a size in which the MPI overhead and network latency will dominate the communication overhead. The idea is to send a batch of surface points in each MPI call, instead of sending surface points, individually. This will reduce the communication overhead considerably, as the size of the sub-grids decreases. The number of grids packed together in this way, we call \emph{batch-size}.
 
+%\begin{footnotesize}
+%\begin{eqnarray}
+%WaitTime = l + \frac{b}{B} + \max \left(0, l + \frac{b}{B} \right) \left(\frac{t}{b} - 1\right)
+%\end{eqnarray}
+%\end{footnotesize}
+
 When using double buffering, it is important to allow the CPUs to start computing as soon as possible. Combining a large batch-size with double buffering will therefore introduce a penalty as the initial surface points exchange cannot be hidden. One approach to minimize this penalty, is to increase the batch-size continuously in the initial stage. For instance a batch-size of 128 could be reduced to 64 in the initial exchange.
+
+The amount of time used by waiting on non-hidden communication depends on many factors -- some related to the runtime system and some related to the implementation. A general expression of the relationship is given by the following equation, which can be used to find the optimal batch-size and the optimal number of initial batch-size increasements.
+
+\begin{footnotesize}
+\begin{tabular}{p{2mm} l l}
+&&\\
+$l$  &:& latency\\
+$B$  &:& bandwidth\\
+$C$  &:& computation time of one stencil element\\
+$t$  &:& total stencil size\\
+$b$  &:& batch-size\\
+$n$  &:& number of batch-size increasements initially\\
+\end{tabular}
+\begin{eqnarray*}
+WaitTime &=& l + \frac{b}{2^{n} B} + \sum_{i=1}^{n} \max \left(0, l+ \frac{s}{2^{i-1} B} - \frac{C s}{2^{i}}\right) \nonumber \\
+&& +  \max \left(0, l+ \frac{b}{B} - C b\right)\left(\frac{t}{b} - 3 - 2^{n+1} \right)
+\end{eqnarray*}
+\end{footnotesize}
+
 
 \section{Programming approaches}
 Different approaches exist when combining threads and MPI. To preserve control we have chosen to handle the threading manually in pthread.
@@ -343,7 +367,7 @@ Figure \ref{fig:approaches} illustrates the connection between the four programm
 
 
 \section{Results}
-A benchmark of each implementation has been executed on the Blue Gene/P. 16384 CPU-cores or 4096 nodes or 4 racks were made available to us. Every benchmark graph compares the different programming approaches of the stencil operation in GPAW and a periodic boundary condition is used in all cases.
+A benchmark of each implementation has been executed on the Blue Gene/P (Sec. \ref{sec:gpaw}). 16384 CPU-cores or 4096 nodes or 4 racks were made available to us. Every benchmark graph compares the different programming approaches of the stencil operation in GPAW and a periodic boundary condition is used in all cases.
 
 Figure \ref{fig:speedup} is a classic speedup graph comparing every implemented approach with a sequential execution. It is a relatively small job containing only 32 real-space grids. But because of the memory demand, it is not possible to have more than 32 grids running on a single CPU-core.
 
@@ -402,7 +426,7 @@ The experiment is not included in any of the graphs since its performance is ide
 \mbox{\includegraphics[width=250px]{gfx/fidi_scaleruntime}}
 \mbox{\includegraphics[width=250px]{gfx/fidi_scale}}
 } 
- \caption{A scalability graph starting at 1024 CPU-cores running the stencil operation. In the left graph the running time of every approach is shown and in the right graph every approach is compared to the fastest approach on 1024 CPU-cores namely the \textbf{Hybrid multiple}. All jobs consists of 2816 real-space grids all size of $192^3$, and the best batch-size has been found for every number of CPU-cores.}
+ \caption{A scalability graph starting at 1024 CPU-cores running the stencil operation. In the left graph the running time of every approach is shown and in the right graph every approach is compared against the fastest approach on 1024 CPU-cores namely the \textbf{Hybrid multiple}. All jobs consists of 2816 real-space grids all size of $192^3$, and the best batch-size has been found for every number of CPU-cores.}
  \label{fig:scale}
 \end{figure*}
 
