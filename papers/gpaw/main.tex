@@ -116,7 +116,7 @@
 
 \begin{abstract}
 The concept of massively parallel processors has been taken to the extreme with the introduction of the BlueGene architectures from IBM. With hundreds of thousands of processors in one machine the parallelism is extreme, but so are the techniques that must be applied to obtain performance with that many processors. 
-In this work we present optimizations of a Grid-based projector-augmented wave method software, GPAW \cite{Mortensen05} for the Blue Gene/P architecture. The improvements are achieved by exploring the advantage of shared and distributed memory programming also known as hybrid programming. The work focuses on optimizing a very time consuming operation in GPAW, the stencil operation, and different hybrid programming approaches are evaluated. The work succeeds in demonstrating a hybrid programming model which is clearly beneficial compared to the original flat programming model. In total an improvement of 1.94 compared to the original implementation is obtained. The results we demonstrate here are reasonably general and may be applied to other stencil codes.
+In this work we present optimizations of a Grid-based projector-augmented wave method software, GPAW \cite{Mortensen05} for the Blue Gene/P architecture. The improvements are achieved by exploring the advantage of shared and distributed memory programming also known as hybrid programming and blocked communication to improve latency hiding. The work focuses on optimizing a very time consuming operation in GPAW, the stencil operation, and different hybrid programming approaches are evaluated. The work succeeds in demonstrating a hybrid programming model which is clearly beneficial compared to the original flat programming model. In total an improvement of 1.94 compared to the original implementation is obtained. The results we demonstrate here are reasonably general and may be applied to other stencil codes.
 \end{abstract}
 
 \begin{keyword}
@@ -144,7 +144,7 @@ The current trend in HPC hardware is towards systems of shared-memory computatio
 
 To exploit the memory locality in shared-memory computation nodes a paradigm which combines shared and distributed memory programming may be of interest. The idea is to avoid communication between CPU-cores on the same node. Unfortunately, it is not trivial to obtain good performance when combining shared-memory programming with distributed memory programming. Even though inter-CPU communication is avoided, it is often the case that the sole use of MPI\cite{mpi} outperforms a combination of threads and MPI when computing on clusters of shared-memory computation nodes\cite{henty2000, hipp04Hybrid, VinterB}.
 
-We evaluate two different hybrid programming approaches. One approach in which inter-node communication is handled individually by every thread and another approach in which one thread handles the inter-node communication on behalf of all the other threads in a node. The work shows that, on the Blue Gene/P, the first approach is clearly superior the latter. In \cite{Cappello2000} the authors concludes that, on a well balanced system, a loop level parallelization approach, corresponding to our second hybrid approach, is unfavorably compared to a strictly MPI implementation. Our first hybrid approach was developed on the basis of that conclusion.
+We evaluate two different hybrid programming approaches. One approach in which inter-node communication is handled individually by every thread and another approach in which one thread handles the inter-node communication on behalf of all the other threads in a node. The work shows that, on the Blue Gene/P, the first approach is clearly superior the latter. In \cite{Cappello2000} the authors concludes that, on a well balanced system, a loop level parallelization approach, corresponding to our second hybrid approach, is unfavorably compared to a strict MPI implementation. Our first hybrid approach was developed on the basis of that conclusion.
 
 \section{GPAW}
 GPAW is a real-space grid implementation of the projector augmented wave method\cite{paw}. It uses uniform real-space grids and the finite-difference approximation for the density functional theory calculations.
@@ -214,7 +214,7 @@ Torus bandwidth & 6 $\times$ 2 $\times$ 425MB/s = 5.1GB/s\\
 Blue Gene/P consists of a number of nodes interconnected with three independent networks: a 3D torus network, a collective tree structured network, and a global barrier network. All point-to-point communication goes through the torus network and every node is equipped with a direct memory access (DMA) engine to offload torus communication from the CPUs. The collective tree structured network is used for collective operation like the MPI \emph{reduce} operation and the global barrier network is used for barriers.
 
 Table \ref{tab:bgp} is a brief description of a BGP node. One thing to highlight is the ratio between the speed of the CPU-cores and the main memory. 
-Since the CPU-cores are relatively slow and the main memory is relatively fast compared to today's standard, the performance of the main memory is not as far behind the CPU as usually. Furthermore, the torus bandwidth is only three times lower than the main memory if all six connections are used. The von Neumann bottleneck associated with main memory and network is therefore reduced.
+Since the CPU-cores are relatively slow and the main memory is relatively fast compared to today's standard, the performance of the main memory is not as far behind the CPU as usually. Furthermore, the torus bandwidth is only three times lower than the main memory bus when all six connections are used. The von Neumann bottleneck\cite{Backus78} associated with main memory and network is therefore reduced.
 
 The CPU-cores can be utilized by normal SMP approaches like pthread or OpenMP, with the limitation that BGP only supports one thread per CPU-core. The BGP addresses the problem of utilizing multiple CPU-cores by supporting a virtual partition of the nodes. From the programmers point of view the four CPU-cores would then look like four individual nodes with each 512MB of main memory. This virtual partitioning is called virtual mode.
 
@@ -310,7 +310,7 @@ Double buffering is a technique that makes it possible to overlap communication 
 The performance gain is dependent on the ability of the MPI library and the underlying hardware to process non-blocking send and receive calls. On the BGP, progress in non-blocking send and receive calls will be maintained by the DMA engine and increased performance is therefore expected.
 
 \subsubsection{Batching}
-An way to ensure critical packet size is to pack real-space grids into batches; inspired by the message size experiment (Figure \ref{fig:batchsize}).
+An way to obtain critical packet size is to pack real-space grids into batches; inspired by the message size experiment (Figure \ref{fig:batchsize}).
 
 Continuously dividing the grids between more and more MPI processes reduces the number of surface points in a single sub-grid. That is, at some point the amount of data send by a single MPI call will be reduced to a size in which the MPI overhead and network latency will dominate the communication overhead. The idea is to send a batch of surface points in each MPI call, instead of sending surface points, individually. This will reduce the communication overhead considerably, as the size of the sub-grids decreases. The number of grids packed together in this way, we call \emph{batch-size}.
 
@@ -320,25 +320,31 @@ Continuously dividing the grids between more and more MPI processes reduces the 
 %\end{eqnarray}
 %\end{footnotesize}
 
-When using double buffering, it is important to allow the CPUs to start computing as soon as possible. Combining a large batch-size with double buffering will therefore introduce a penalty as the initial surface points exchange cannot be hidden. One approach to minimize this penalty, is to increase the batch-size continuously in the initial stage. For instance a batch-size of 128 could be reduced to 64 in the initial exchange.
+When using double buffering, it is important to allow the CPUs to start computing as soon as possible. Combining a large batch-size with double buffering will therefore introduce a penalty as the initial surface points exchange cannot be hidden. One approach to minimize this penalty, is to increase the batch-size continuously in the initial stage. For instance a batch-size of 128 could be reduced to 64 in the initial exchange. This technique we call \emph{sloped batching}.
 
-The amount of time used by waiting on non-hidden communication depends on many factors -- some related to the runtime system and some related to the implementation. A general expression of the relationship is given by the following equation, which can be used to find the optimal batch-size and the optimal number of initial batch-size increasements.
+The amount of time used by waiting on non-hidden communication depends on many factors -- some related to the runtime system and some related to the implementation. A general expression of the relationship is given in figure \ref{fig:waittime}, which can be used to find the optimal batch-size and the optimal number of initial batch-size increasements when doing sloped batching. The CPU overhead associated with a implementation of double buffering and sloped batching is not included in the expression likewise the memory access time associated with the stencil computation is also not included.
 
+\begin{figure}
+ \centering
 \begin{footnotesize}
 \begin{tabular}{p{2mm} l l}
-&&\\
 $l$  &:& latency\\
 $B$  &:& bandwidth\\
 $C$  &:& computation time of one stencil element\\
 $t$  &:& total stencil size\\
 $b$  &:& batch-size\\
-$n$  &:& number of batch-size increasements initially\\
+$n$  &:& number of batch-size increasements initially
 \end{tabular}
 \begin{eqnarray*}
-WaitTime &=& l + \frac{b}{2^{n} B} + \sum_{i=1}^{n} \max \left(0, l+ \frac{s}{2^{i-1} B} - \frac{C s}{2^{i}}\right) \nonumber \\
-&& +  \max \left(0, l+ \frac{b}{B} - C b\right)\left(\frac{t}{b} - 3 - 2^{n+1} \right)
+WaitTime &=& l + \frac{b}{2^{n} B} + \nonumber \\
+&&\sum_{i=1}^{n} \max \left(0, l+ \frac{s}{2^{i-1} B} - \frac{C s}{2^{i}}\right) + \nonumber \\
+&&\max \left(0, l+ \frac{b}{B} - C b\right)\left(\frac{t}{b} + 1 - 2^{n+1} \right)
 \end{eqnarray*}
+\vspace{-5mm}
 \end{footnotesize}
+ \caption{Formula of the amount of time used by waiting on non-hidden communication when using double buffering and sloped batching. The first line represents the initial communication, which can not overlap computation. The second line represents the sloped bashing, in which the block-size is doubled in each iteration and the third line represents the rest of the iterations, in which the block-size remains constant.}
+ \label{fig:waittime}
+\end{figure}
 
 
 \section{Programming approaches}
@@ -443,7 +449,7 @@ When comparing our fastest implementation compared to the original implementatio
 While latency-hiding is the primary factor for the improvement we observe, the hybrid implementation is still 10\% faster than the non-hybrid approach.
 
 \subsection{Further work}
-Overall we are satisfied with the performance of the new implementation of the stencil operation, still a lot of work remains if the entire GPAW computation should utilize latency-hiding and hybrid programming. It may not be worth the hard work that is needed to rewrite most of GPAW, but it is our expectation that an overall performance gain as the one demonstrated in this work may be obtained for the application overall.
+Overall we are satisfied with the performance of the new implementation of the stencil operation, still a lot of work remains if the entire GPAW computation should utilize latency-hiding and hybrid programming. It may not be worth the hard work that is needed to rewrite most of GPAW. %, but it is our expectation that an overall performance gain as the one demonstrated in this work may be obtained for the application overall.
 
 \section{Acknowledgments}
 The authors would like to thank The Danish Agency for Science, Technology and Innovation and the GPAW team at the Technical University of Denmark in particular Jens J. Mortensen and Marcin Dulak. Furthermore we would like to thank Argonne National Laboratory for giving us access to the Blue Gene/P.
