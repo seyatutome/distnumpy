@@ -51,9 +51,9 @@ numbers=left, numberstyle=\ttfamily\bfseries\footnotesize
 
 \begin{document}
 
-\conferenceinfo{PGAS'10}{Oct 12--15, 2010, New York.} 
+\conferenceinfo{PGAS'10}{New York, New York USA.} 
 \copyrightyear{2010} 
-%\copyrightdata{[to be supplied]}
+\copyrightdata{978-1-4503-0461-0/10/10}
 
 %\titlebanner{DistNumPy}        % These are ignored unless
 \preprintfooter{DistNumPy}   % 'preprint' option specified.
@@ -134,7 +134,7 @@ NumPy\cite{numpy} is a library for numerical operations in Python which is imple
 The primary interface in NumPy is a Python interface and it is possible to use NumPy exclusively from Python. NumPy also provides a C interface in which it is possible to access the same functionality as in the Python interface. Additionally, the C interface also allows programmers to access low level data structures like pointers to array data and thereby provides the possibility to implement arbitrary array operations efficiently in C. The two interfaces may be used interchangeably through the Python program.
 
 \subsection{Universal functions}
-An important mechanism in NumPy is a concept called Universal function. A universal function (ufunc) is a function that operates on all elements in an array independently. That is, a ufunc is a vectorized wrapper for a function that takes a fixed number of scalar inputs and produces a fixed number of scalar outputs. Using ufunc can result in a significant performance boost compared to native Python because the computation-loop is executed in C.
+An important mechanism in NumPy is a concept called Universal function. A universal function (ufunc) is a function that operates on all elements in an array independently. That is, a ufunc is a vectorized wrapper for a function that takes a fixed number of scalar inputs and produces a fixed number of scalar outputs. Using ufunc can result in a significant performance boost compared to native Python because the computation-loop is implemented in C.
 
 \subsubsection{Function broadcasting}
 To make ufunc more flexible it is possible to use arrays with different number of dimensions. To utilize this feature the size of the dimensions must either be identical or have the length one. When the ufunc is applied, all dimensions with a size of one will be \emph{broadcasted} in the NumPy terminology. That is, the array will be duplicated along the \emph{broadcasted} dimension (Fig. \ref{fig:ufunc_broadcast}).
@@ -219,7 +219,12 @@ Array-views are not allowed to refer to each other, which means that the hierarc
 
 %Most simplifications are related to the use of partial views, which are array-views that represents a sub-part of the underlying array-base. It is much simpler to handle array-views that represent the whole array-base 1-to-1 rather than handle arbitrary array-views. For instance, blocking communication together in large MPI-messages becomes difficult and introduces a significant overhead when using non-continuous array-views. The problem is the data distribution scheme (N-Dimensional Block Cyclic Distribution). It becomes hard for an MPI-process to determine which part of its local data the array-view covers. By introducing a simplified scenario that only includes continuous array-views we have implemented a very efficient blocked universal function.
 
-It is a significant performance challenge to support array-views that represent a non-contiguous sub-part of an array-base. The difficulty lies in the process of packing communication and computation together in large blocks, which is very expensive when operating on non-contiguous data. To overcome this problem we introduce a hierarchy of implementations all optimized for specific operation scenarios. When an operation is applied a search through the hierarchy determines the most optimized implementation for that particular operation. All operations have its own hierarchy some with more levels than others, but at the bottom of the hierarchy all operations have an implementation that can handle all scenarios.
+%It is a significant performance challenge to support array-views that represent a non-contiguous sub-part of an array-base. The difficulty lies in the process of packing communication and computation together in large blocks, which is very expensive when operating on non-contiguous data. To overcome this problem we introduce a hierarchy of implementations all optimized for specific operation scenarios. When an operation is applied a search through the hierarchy determines the most optimized implementation for that particular operation. All operations have its own hierarchy some with more levels than others, but at the bottom of the hierarchy all operations have an implementation that can handle all scenarios.
+
+It is a significant performance challenge to support array-views that are not aligned with the distribution block size, i.e. an array view that has a starting offset that a not aligned with the distribution block size or represents a non-contiguous sub-part of the array-base. The difficulty lies in how to handle data blocks that are located on multiple MPI-processes and are not aligned to each other. Such problems can be handled by partitioning data blocks into sub-blocks that both are aligned and located on a single MPI-process. However, in this work we will not focus on problems that involve non-aligned array-views, but instead simply handle them by communicating and computing each array element individually.
+
+In general we introduce a hierarchy of implementations where each implementation is optimized for specific operation scenarios. When an operation is applied a lookup in the hierarchy determines the best suited implementation for that particular operation. All operations have their own hierarchy some with more levels than others, but at the bottom of the hierarchy all operations have an implementation that can handle any scenario simply by handling each array element individually.
+
 
 
 \subsection{Parallel BLAS}
@@ -345,7 +350,9 @@ The result of the speedup benchmark is illustrated in Figure \ref{fig:JacobiScal
 
 
 \subsubsection{Profiling of the Jacobi implementation}
-To investigate the memory bandwidth limitation observed in the Jacobi execution we have profiled the execution by measuring the time spend on computation and communication (Fig. \ref{fig:JacobiProfiling}). As expected the result shows that the percentages used with communication increases when the number of CPU-cores increases. Furthermore, a noteworthy observation is the almost identical communication overhead at eight CPU-cores and sixteen CPU-cores. This is due the change from a single CPU-core per node to multiple CPU-cores per node. At sixteen CPU-cores half of the communication is performed through the use of shared memory, which means that the communication, just like the computation, is bound by the limited memory bandwidth.
+To investigate the memory bandwidth limitation observed in the Jacobi execution we have profiled the execution by measuring the time spend on computation and communication (Fig. \ref{fig:JacobiProfiling}). As expected the result shows that the percentages used with communication increases when the number of CPU-cores increases. Furthermore, a noteworthy observation is the almost identical communication overhead at eight CPU-cores and sixteen CPU-cores. This is because half of the communication is performed through the use of shared memory at sixteen CPU-cores, which also means that the communication, just like the computation, is bound by the limited memory bandwidth.
+
+%This is due the change from a single CPU-core per node to multiple CPU-cores per node. At sixteen CPU-cores half of the communication is performed through the use of shared memory, which means that the communication, just like the computation, is bound by the limited memory bandwidth.
 
 %To get a better picture of the memory bandwidth limitation observed in the Jacobi execution we have profiled the execution (Fig. \ref{fig:JacobiProfiling}). As expected the result shows that the percentages used with communication increases when the number of CPU-cores increases. However, the profile different between eight CPU-cores and sixteen CPU-cores is minimal, which is due to the limited memory bandwidth. Since each node makes use of multiple CPU-cores when executing on more than eight CPU-cores the memory bandwidth limitation increases the computation time. Because of the decreasing total running time and the fact that the amount of communication is constant when all eight nodes are in use, the percentages used with communication increases at 32 and 64 CPU-cores.
 
@@ -411,7 +418,9 @@ As expected the performance of the C implementation is better than the DistNumPy
 \section{Future work}
 In its current state DistNumPy does not implement the NumPy interface completely. Many specialized operations like Fast Fourier transform or LU factorization is not implemented, but it is our intention to implement the complete Python interface and most of the C interface.
 
-Other important future work include performance and scalability improvement. As showed by the benchmarks, applications that are dominated by non-complex ufuncs easily become memory bounded. One solutions is to block ufuncs, that operate on common arrays, together in one joint operation and thereby make the joint operation more CPU-intensive. If it is possible to join enough ufuncs together the application may become CPU bound rather than memory bound.
+The performance of NumPy programs that make use of array-views that are not aligned with the distribution block size is very poor because each array element is handled individually. This is not a problem for a whole range of NumPy programs, including the experiments presented in this paper, since they do not use non-aligned array-views. However some operations, such as stencil operations, require non-aligned array-views and an important future work is therefore to support all array views with similar efficiency.
+
+Other important future work includes performance and scalability improvement. As showed by the benchmarks, applications that are dominated by non-complex ufuncs easily become memory bounded. One solutions is to merge calls to ufuncs, that operate on common arrays, together in one joint operation and thereby make the joint operation more CPU-intensive. If it is possible to merge enough ufuncs together the application may become CPU bound rather than memory bound.
 
 \section{Conclusions}
 In this work we have successfully shown that it is possible to implement a parallelized version of NumPy\cite{numpy} that seamlessly utilize distributed memory architectures. The only API difference between NumPy and our parallelized version, DistNumPy, is an extra optional parameter in the array creation routines.
