@@ -153,7 +153,7 @@ A central part of density functional theory and a very time consuming task in GP
 
 The computational magnitude of a GPAW simulation depends mainly on three factors: The world size, simulation system resolution and the number of valence electrons. The world size and resolution determine the dimensions of the real-space grids and the number of valence electrons determines the number of real-space grids.
 
-A user is typically more interested in adding valence electrons to the simulation than to increase the size or resolution of the world. The real-space grid size will ordinary be between $100^3$ to $200^3$ where as the total number of real-space grids will be greater than thousand.
+A user is typically more interested in adding valence electrons to the simulation than to increase the size or resolution of the world. The real-space grid size will ordinary be in the interval $100^3$ to $200^3$ where as the total number of real-space grids will be greater than thousand.
 
 \subsection{Stencil Operation}
 \begin{figure}
@@ -252,7 +252,7 @@ The grids are simply divided into a number of quadrilaterals matching the number
 \subsection{Distributed Stencil Operation}
 Generally, it should be easy to obtain good scalability for a distributed stencil operation since computation grows faster than communication. If we look at a 3D grid of size $n \times n \times n$ the aggregated computation is $O\left(n^3\right)$ where as the aggregated communication is only $O\left(n^2\right)$. The operation should scale very well when $n$ grows at the same rate as the number of CPUs. In GPAW, however, scalability is very hard to obtain since the grid size will ordinarily not exceed $200^3$. Thus, the $n$ is smaller than $200$ even when parallelizing over thousands of CPUs.
 
-The fact that the number of grids grows at the same pace as the CPUs would normally make the problem embarrassingly parallel. Since no communication between grids is required in GPAW, each MPI process could compute a whole grid without the need of any communication. However, this is not possible since GPAW requires that every MPI process gets the same subset of every grid (Figure \ref{fig:wavedist}).
+The fact that the number of independent grids grows linearly with the number of valence electrons that a simulated would normally make the problem embarrassingly parallel. Each MPI process could compute a whole grid without the need of any communication, since no communication between grids is required in GPAW. However, this is not possible because GPAW requires that every MPI process gets the same subset of every grid (Figure \ref{fig:wavedist}).
 
 One feature in GPAW, which makes it easier to parallelize, is the fact that the input grid and the output grid used in the stencil operation is always two separate grids. We need therefore not consider the order in which the grid-points are computed.
 
@@ -337,7 +337,7 @@ $n$  &:& number of batch-size increasements initially
 \end{tabular}
 \begin{eqnarray*}
 WaitTime &=& l + \frac{b}{2^{n} B} + \nonumber \\
-&&\sum_{i=1}^{n} \max \left(0, l+ \frac{s}{2^{i-1} B} - \frac{C s}{2^{i}}\right) + \nonumber \\
+&&\sum_{i=1}^{n} \max \left(0, l+ \frac{b}{2^{i-1} B} - \frac{C b}{2^{i}}\right) + \nonumber \\
 &&\max \left(0, l+ \frac{b}{B} - C b\right)\left(\frac{t}{b} + 1 - 2^{n+1} \right)
 \end{eqnarray*}
 \vspace{-5mm}
@@ -365,11 +365,11 @@ The following is a description of different programming approaches that we have 
 \begin{figure}
  \centering
  \includegraphics[width=\linewidth]{gfx/approaches}
- \caption{A illustrates of the connection between four programming approaches.}
+ \caption{A illustrates of the relationship between the four programming approaches -- going from the \textbf{Flat original} approach to the \textbf{Hybrid multiple} approach.}
  \label{fig:approaches}
 \end{figure}
 
-Figure \ref{fig:approaches} illustrates the connection between the four programming approaches -- from the original approach, in which pure MPI programming is used and the wave-functions are partitioned inside the nodes, to the hybrid approach where hybrid programming is used and the wave-functions are shared inside the nodes.
+Figure \ref{fig:approaches} illustrates the relationship between the four programming approaches -- from the original approach, in which pure MPI programming is used and the wave-functions are partitioned inside the nodes, to the hybrid approach where hybrid programming is used and the wave-functions are shared inside the nodes.
 
 
 \section{Results}
