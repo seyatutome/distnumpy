@@ -64,7 +64,7 @@ The data layout used in DistNumPy consists of three levels (Fig. \ref{fig:view_b
 
 The second level is the view-block level, which is an abstraction level above the base-block level. A view-block represents a basic block of an array-view, which means that a view-block is a contiguous block of array elements from the perspective of the user. A view-block can span over multiple base-blocks and consequently also over multiple MPI-processes. For a MPI-process to access a whole view-block it will have to fetch data from possible remote MPI-processes and put the pieces together before accessing the block. To avoid this process, which may require some internal memory copying, we divide view-blocks into sub-view-block.
 
-Sub-view-block is the third block level and is simply a block of data that is a part of a view-block but is located in only one MPI-process. The general idea is that all array operation is translated into a number of sub-view-block operations.
+Sub-view-block is the third block level and is simply a block of data that is a part of a view-block but is located on only one MPI-process. The general idea is that all array operation is translated into a number of sub-view-block operations.
 
 \begin{figure}
  \centering
