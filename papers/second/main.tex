@@ -111,22 +111,16 @@ We will define a \emph{aligned array} as an array that have a direct contiguous 
 
 
 \section{Universal Function}
-An important mechanism in DistNumPy is a concept called Universal function. A universal function (ufunc) is a function that operates on all elements in an array independently. That is, a ufunc is a vectorized wrapper for a function that takes a fixed number of scalar inputs and produces a fixed number of scalar outputs. Using ufunc can result in a significant performance boost compared to native Python because the computation-loop is implemented in C and is executed in parallel. 
+An important mechanism in DistNumPy is a concept called Universal function. A universal function (ufunc) is a function that operates on all elements in an array-view independently. That is, an ufunc is a vectorized wrapper for a function that takes a fixed number of scalar inputs and produces a fixed number of scalar outputs. E.g. addition is an ufunc that takes three array-views as argument: two input arrays and one output array; and for each element the two input arrays are added together and the result is written to the output array. Using ufunc can result in a significant performance boost compared to native Python because the computation-loop is implemented in C and is executed in parallel.
 
-An ufunc operation is translated into a number of view-block operations which again is translated into a number of sub-view-block operations. 
+Performing an ufunc operation on a whole array-view is semantically equivalent to performing the ufunc operation on each array-view block individually. It is this property that makes it possible to perform distributed ufunc operations in parallel. 
 
-
-Ufuncs are parallelized by the data distribution of the output array.
-
-\subsection{Dispatching}
-The MPI-process hierarchy in DistNumPy has one MPI-process (master) placed above the others (slaves). All MPI-processes run the Python interpreter but only the master executes the user-program, the slaves will block at the \texttt{import numpy} statement. 
-
-The following describes the flow of the dispatching:
+A distributed ufunc operation consists of four steps: 
 \begin{enumerate}
-\item The master is the dispatcher and will, when the user applies a python command on a distributed array, compose a message with meta-data describing the command. 
-\item The message is then broadcasted from the master to the slaves with a blocking MPI-broadcast. It is important to note that the message only contains meta-data and not any actual array data.
-\item After the broadcast, all MPI-processes will apply the command on the sub-array they own and exchange array elements as required (Point-to-Point communication).
-\item When the command is completed, the slaves will wait for the next command from the master and the master will return to the user's python program. The master will return even though some slaves may still be working on the command, synchronization is therefore required before the next command broadcast.
+\item Each MPI-process determents which view-blocks of the ufunc operation that is should compute. This is based on the distributed of the output array-view. 
+\item All MPI-processes redistribute the array elements in such a manner that all MPI-processes can perform its computation locally. 
+\item All MPI-processes performs its local computation.
+\item All MPI-processes redistribute the array elements back to the original array distribution.
 \end{enumerate}
 
 
@@ -141,8 +135,9 @@ The following describes the flow of the dispatching:
 
 The standard approach to hide communication latency behind computation in message-passing is a technique known as double buffering. The implementation of double buffering is straightforward when operating on a set of data block that all have identical sizes. The communication of one data block is overlapped with the computation of another already communicated data block (Fig. \ref{fig:double_buffering}) and since the sizes of all the data blocks are identical all iterations are also identical.
 
-The straightforward double buffering approach is used in the current version of DistNumPy. It works very well for ufuncs that operates on aligned arrays because it translates into one communication and computation operation per data block. However, for ufuncs that operates on non-aligned arrays the approach is inadequate because it translates into a distributed depended number of communication and computation operation per data block.
+The straightforward double buffering approach is used in the current version of DistNumPy. It works very well for ufuncs that operates on aligned arrays because it translates into a fixed number of communication and computation operations per data block. However, for ufuncs that operates on non-aligned arrays the approach is not straightforward because it translates into a variable number of communication and computation operation per data block.
 
+What is needed is a generic approach that, based on the executing program, schedules the communication and computation in an overlapping pattern. 
 
 \section{Lazy Evaluation}
 
@@ -150,7 +145,7 @@ The straightforward double buffering approach is used in the current version of 
 Lazy evaluation on these data blocks are managed through a simple dependency list for each block. When a NumPy operation is issued it is split across the sub-view blocks that are involved in the operation. For each such operation on a sub-view block a set of tasks are created, one for each combined set of data-blocks to sub-view blocks. Dependencies are then added to the dependency-list of each data-block that is involved, each dependency link back to the individual tasks. When the number of dependencies on a task reached zero the task may be moved to the ready-queue. But before this is done we traverse the dependency list and include any other task that can be merged into the ready task, given that they could execute in parallel with the task or could execute given the task was done, when two tasks are merged into one, the remaining list is traversed under the same rules but for the merged task.
 
 
-\subsection{Apply Operation List}
+\subsection{Ufunc Operation List}
 
 
 
