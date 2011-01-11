@@ -113,14 +113,14 @@ We will define a \emph{aligned array} as an array that have a direct contiguous 
 \section{Universal Function}
 An important mechanism in DistNumPy is a concept called Universal function. A universal function (ufunc) is a function that operates on all elements in an array-view independently. That is, an ufunc is a vectorized wrapper for a function that takes a fixed number of scalar inputs and produces a fixed number of scalar outputs. E.g. addition is an ufunc that takes three array-views as argument: two input arrays and one output array; and for each element the two input arrays are added together and the result is written to the output array. Using ufunc can result in a significant performance boost compared to native Python because the computation-loop is implemented in C and is executed in parallel.
 
-Performing an ufunc operation on a whole array-view is semantically equivalent to performing the ufunc operation on each array-view block individually. It is this property that makes it possible to perform distributed ufunc operations in parallel. 
+Performing an ufunc operation on a whole array-view is semantically equivalent to performing the ufunc operation on each array-view block individually. It is this property that makes it possible to perform a distributed ufunc operation in parallel. 
 
 A distributed ufunc operation consists of four steps: 
 \begin{enumerate}
-\item Each MPI-process determents which view-blocks of the ufunc operation that is should compute. This is based on the distributed of the output array-view. 
-\item All MPI-processes redistribute the array elements in such a manner that all MPI-processes can perform its computation locally. 
+\item Each MPI-process determents which view-blocks of the ufunc operation that is should compute. This is strictly based on the distributed of the output array-view. 
+\item All MPI-processes exchange array elements in such a manner that all MPI-processes can perform its computation locally. 
 \item All MPI-processes performs its local computation.
-\item All MPI-processes redistribute the array elements back to the original array distribution.
+\item All MPI-processes sends written array elements back to the original locations.
 \end{enumerate}
 
 
@@ -135,13 +135,18 @@ A distributed ufunc operation consists of four steps:
 
 The standard approach to hide communication latency behind computation in message-passing is a technique known as double buffering. The implementation of double buffering is straightforward when operating on a set of data block that all have identical sizes. The communication of one data block is overlapped with the computation of another already communicated data block (Fig. \ref{fig:double_buffering}) and since the sizes of all the data blocks are identical all iterations are also identical.
 
-The straightforward double buffering approach is used in the current version of DistNumPy. It works very well for ufuncs that operates on aligned arrays because it translates into a fixed number of communication and computation operations per data block. However, for ufuncs that operates on non-aligned arrays the approach is not straightforward because it translates into a variable number of communication and computation operation per data block.
+The straightforward double buffering approach is used in the current version of DistNumPy. It works very well for ufuncs that operates on aligned arrays because it translates into complete communication and computation view block operations. There is therefore no need to introduce latency hiding inside a view block because the whole view block is located on a single MPI-process. This is not the case for ufuncs that operates on non-aligned arrays where view blocks are located on multiple MPI-processes. I order to achieve good performance some latency hiding inside view blocks must be introduced. For example the computation of a view block in figure \ref{fig:view_block} can make use of latency hiding by first initiate the communication of the three non-local sub-view blocks, then compute the local sub-view block and finally compute the three communicated sub-view blocks. 
 
-What is needed is a generic approach that, based on the executing program, schedules the communication and computation in an overlapping pattern. 
+What is needed is a generic approach that, based on the executing program, schedules the communication and computation in an overlapping pattern. Since Python is an interpreted interactive programming language it is not possible to schedule communication and computation operation at compile time. Instead some kind of look-ahead technique is required to determine the communication and computation operations used in the program. 
+
+
 
 \section{Lazy Evaluation}
+To make it possible for a scheduler to schedule communication behind computation operations we introduce Lazy Evaluation. The idea is that by having a bunch of operations to carry out it may be possible to schedule communication and computation operations with no mutual dependency in parallel.
 
 
+
+\subsection{The Dependency System}
 Lazy evaluation on these data blocks are managed through a simple dependency list for each block. When a NumPy operation is issued it is split across the sub-view blocks that are involved in the operation. For each such operation on a sub-view block a set of tasks are created, one for each combined set of data-blocks to sub-view blocks. Dependencies are then added to the dependency-list of each data-block that is involved, each dependency link back to the individual tasks. When the number of dependencies on a task reached zero the task may be moved to the ready-queue. But before this is done we traverse the dependency list and include any other task that can be merged into the ready task, given that they could execute in parallel with the task or could execute given the task was done, when two tasks are merged into one, the remaining list is traversed under the same rules but for the merged task.
 
 
