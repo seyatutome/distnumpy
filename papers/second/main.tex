@@ -94,7 +94,7 @@ B = numpy.array([1,2,3], dist=True)
 
 
 \section{Data Layout}
-The data layout used in DistNumPy consists of three levels (Fig. \ref{fig:view_block}). The first level is the base-block level, in which a base-block map directly into one block of memory located on one node. The memory block is not necessarily contiguous but only one MPI-process has exclusive access to the block. A base-block is the basic build block in the distribution scheme used when distributing DistNumPy arrays across multiple MPI-processes. The distribution scheme used in DistNumPy is the N-Dimensional Block Cyclic Distribution\cite{distnumpy09} inspired by High Performance Fortran\cite{Loveman93}. 
+The data layout used in DistNumPy consists of three levels (Fig. \ref{fig:view_block}). The first level is the base-block level, in which a base-block map directly into one block of memory located on one node. The memory block is not necessarily contiguous but only one MPI-process has exclusive access to the block. A base-block is the basic building block in the distribution scheme used when distributing DistNumPy arrays across multiple MPI-processes. The distribution scheme used in DistNumPy is the N-Dimensional Block Cyclic Distribution\cite{distnumpy09} inspired by High Performance Fortran\cite{Loveman93}. 
 
 The second level is the view-block level, which is an abstraction level above the base-block level. A view-block represents a basic block of an array-view, which means that a view-block is a contiguous block of array elements from the perspective of the user. A view-block can span over multiple base-blocks and consequently also over multiple MPI-processes. For a MPI-process to access a whole view-block it will have to fetch data from possible remote MPI-processes and put the pieces together before accessing the block. To avoid this process, which may require some internal memory copying, we divide view-blocks into sub-view-block.
 
@@ -105,7 +105,7 @@ We will define a \emph{aligned array} as an array that have a direct contiguous 
 \begin{figure}
  \centering
  \includegraphics[width=150px]{gfx/view_blocks}
- \caption{An illustration of the block hierarchy used in representing a 2D distributed array. The array is divided into three block-types: Base, View and Sub-View blocks. The 16 base-blocks make up the base-array, which may be distributed between multiple MPI-processes. The 9 view-blocks make up a view of the base-array and represent the elements that are visible to the user. Each view-block is furthermore divided into four sub-view-blocks, which are the basic block of elements and is always located on one MPI-process.}
+ \caption{An illustration of the block hierarchy used in representing a 2D distributed array. The array is divided into three block-types: Base, View and Sub-View-blocks. The 16 base-blocks make up the base-array, which may be distributed between multiple MPI-processes. The 9 view-blocks make up a view of the base-array and represent the elements that are visible to the user. Each view-block is furthermore divided into four sub-view-blocks, which are the basic block of elements and is always located on one MPI-process.}
  \label{fig:view_block}
 \end{figure}
 
@@ -120,7 +120,7 @@ A distributed ufunc operation consists of four steps:
 \item Each MPI-process determents which view-blocks of the ufunc operation that is should compute. This is strictly based on the distributed of the output array-view. 
 \item All MPI-processes exchange array elements in such a manner that all MPI-processes can perform its computation locally. 
 \item All MPI-processes performs its local computation.
-\item All MPI-processes sends written array elements back to the original locations.
+\item All MPI-processes sends the written array elements back to the original locations.
 \end{enumerate}
 
 
@@ -135,19 +135,26 @@ A distributed ufunc operation consists of four steps:
 
 The standard approach to hide communication latency behind computation in message-passing is a technique known as double buffering. The implementation of double buffering is straightforward when operating on a set of data block that all have identical sizes. The communication of one data block is overlapped with the computation of another already communicated data block (Fig. \ref{fig:double_buffering}) and since the sizes of all the data blocks are identical all iterations are also identical.
 
-The straightforward double buffering approach is used in the current version of DistNumPy. It works very well for ufuncs that operates on aligned arrays because it translates into complete communication and computation view block operations. There is therefore no need to introduce latency hiding inside a view block because the whole view block is located on a single MPI-process. This is not the case for ufuncs that operates on non-aligned arrays where view blocks are located on multiple MPI-processes. I order to achieve good performance some latency hiding inside view blocks must be introduced. For example the computation of a view block in figure \ref{fig:view_block} can make use of latency hiding by first initiate the communication of the three non-local sub-view blocks, then compute the local sub-view block and finally compute the three communicated sub-view blocks. 
+The straightforward double buffering approach is used in the current version of DistNumPy. It works very well for ufuncs that operates on aligned arrays because it translates into complete communication and computation view-block operations. Therefore is there no need to introduce latency hiding inside a view-block because the whole view-block is located on a single MPI-process. This is not the case for ufuncs that operates on non-aligned arrays where view-blocks are located on multiple MPI-processes. I order to achieve good performance some latency hiding inside view-blocks must be introduced. For example the computation of a view-block in figure \ref{fig:view_block} can make use of latency hiding by first initiate the communication of the three non-local sub-view-blocks, then compute the local sub-view-block and finally compute the three communicated sub-view-blocks. 
 
 What is needed is a generic approach that, based on the executing program, schedules the communication and computation in an overlapping pattern. Since Python is an interpreted interactive programming language it is not possible to schedule communication and computation operation at compile time. Instead some kind of look-ahead technique is required to determine the communication and computation operations used in the program. 
 
 
 
 \section{Lazy Evaluation}
-To make it possible for a scheduler to schedule communication behind computation operations we introduce Lazy Evaluation. The idea is that by having a bunch of operations to carry out it may be possible to schedule communication and computation operations with no mutual dependency in parallel.
-
+To make it possible for a scheduler to schedule communication behind computation operations we introduce Lazy Evaluation. During the execution of a DistNumPy program all MPI-processes records the requested array operations rather than applying them immediately. The operations are maintained in a convenient data structure and at a later point all MPI-processes perform the operations. The idea is that by having a bunch of operations to carry out it may be possible to schedule communication and computation operations that have no mutual dependencies in parallel.
 
 
 \subsection{The Dependency System}
-Lazy evaluation on these data blocks are managed through a simple dependency list for each block. When a NumPy operation is issued it is split across the sub-view blocks that are involved in the operation. For each such operation on a sub-view block a set of tasks are created, one for each combined set of data-blocks to sub-view blocks. Dependencies are then added to the dependency-list of each data-block that is involved, each dependency link back to the individual tasks. When the number of dependencies on a task reached zero the task may be moved to the ready-queue. But before this is done we traverse the dependency list and include any other task that can be merged into the ready task, given that they could execute in parallel with the task or could execute given the task was done, when two tasks are merged into one, the remaining list is traversed under the same rules but for the merged task.
+The main challenge when introducing Lazy Evaluation is to implement a dependency system that schedules operations in a performance efficient manner while the dependency system overhead is kept at an acceptable level.
+
+A directed acyclic graph (DAG) is a conveniently data structure to store the operations and the operation dependencies in. The nodes of the DAG represent operations and the edges represent the dependencies between the operations. 
+
+
+
+
+
+%Lazy evaluation on these data blocks are managed through a simple dependency list for each block. When a NumPy operation is issued it is split across the sub-view blocks that are involved in the operation. For each such operation on a sub-view block a set of tasks are created, one for each combined set of data-blocks to sub-view blocks. Dependencies are then added to the dependency-list of each data-block that is involved, each dependency link back to the individual tasks. When the number of dependencies on a task reached zero the task may be moved to the ready-queue. But before this is done we traverse the dependency list and include any other task that can be merged into the ready task, given that they could execute in parallel with the task or could execute given the task was done, when two tasks are merged into one, the remaining list is traversed under the same rules but for the merged task.
 
 
 \subsection{Ufunc Operation List}
