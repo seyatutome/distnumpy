@@ -1,24 +1,14 @@
-\documentclass[conference]{IEEEtran}
+\documentclass[preprint]{../PGAS10/sigplanconf}
 
-\ifCLASSINFOpdf
-   \usepackage[pdftex]{graphicx}
-  % declare the path(s) where your graphic files are
-  % \graphicspath{{../pdf/}{../jpeg/}}
-  % and their extensions so you won't have to specify these with
-  % every instance of \includegraphics
-   \DeclareGraphicsExtensions{.pdf,.jpeg,.png}
-\else
-  % or other class option (dvipsone, dvipdf, if not using dvips). graphicx
-  % will default to the driver specified in the system graphics.cfg if no
-  % driver is specified.
-   \usepackage[dvips]{graphicx}
-  % declare the path(s) where your graphic files are
-  % \graphicspath{{../eps/}}
-  % and their extensions so you won't have to specify these with
-  % every instance of \includegraphics
-   \DeclareGraphicsExtensions{.eps, .ps}
-\fi
+% The following \documentclass options may be useful:
+%
+% 10pt          To set in 10-point type instead of 9-point.
+% 11pt          To set in 11-point type instead of 9-point.
+% authoryear    To obtain author/year citation style instead of numeric.
 
+\usepackage{amsmath}
+\usepackage[dvips]{graphicx}
+\DeclareGraphicsExtensions{.eps, .ps}
 \usepackage[caption=false,font=footnotesize]{subfig}
 \usepackage{url}
 \usepackage{listings}
@@ -37,34 +27,29 @@ xrightmargin=5mm,
 numbers=left, numberstyle=\ttfamily\bfseries\footnotesize
 }
 
-\hyphenation{}
-
+% correct bad hyphenation here
+\hyphenation{Dist-Num-Py}
 
 \begin{document}
 
-\title{Generic Latency Hiding for Distributed Numerical Python by Means of Lazy Evaluation}
+\conferenceinfo{PGAS'10}{New York, New York USA.} 
+\copyrightyear{2010} 
+\copyrightdata{978-1-4503-0461-0/10/10}
 
-% author names and affiliations
-% use a multiple column layout for up to three different
-% affiliations
-\author{\IEEEauthorblockN{Mads Ruben Burgdorff Kristensen}
-\IEEEauthorblockA{eScience Centre\\
-University of Copenhagen\\
-Denmark}
-\and
-\IEEEauthorblockN{Brian Vinter}
-\IEEEauthorblockA{eScience Centre\\
-University of Copenhagen\\
-Denmark}}
+%\titlebanner{DistNumPy}        % These are ignored unless
+\preprintfooter{DistNumPy}   % 'preprint' option specified.
 
-% make the title area
+\title{Numerical Python for Scalable Architectures}
+
+\authorinfo{Mads Ruben Burgdorff Kristensen \\ Brian Vinter}
+           {eScience Centre\\ University of Copenhagen\\ Denmark}
+           {madsbk@diku.dk/vinter@diku.dk}
+
 \maketitle
 
 \begin{abstract}
 
 \end{abstract}
-
-\IEEEpeerreviewmaketitle
 
 \section{Introduction}
 In this paper we introduce generic latency hiding for Distributed Numerical Python (DistNumPy)\cite{distnumpy09}, which is a library for doing numerical computation in Python that targets scalable distributed memory architectures. DistNumPy extends the NumPy module\cite{numpy}, which is popular for scientific programming. Replacing NumPy with DistNumPy enables the user to write sequential Python programs that seamlessly utilize distributed memory architectures.
@@ -137,18 +122,71 @@ The standard approach to hide communication latency behind computation in messag
 
 The straightforward double buffering approach is used in the current version of DistNumPy. It works very well for ufuncs that operates on aligned arrays because it translates into complete communication and computation view-block operations. Therefore is there no need to introduce latency hiding inside a view-block because the whole view-block is located on a single MPI-process. This is not the case for ufuncs that operates on non-aligned arrays where view-blocks are located on multiple MPI-processes. I order to achieve good performance some latency hiding inside view-blocks must be introduced. For example the computation of a view-block in figure \ref{fig:view_block} can make use of latency hiding by first initiate the communication of the three non-local sub-view-blocks, then compute the local sub-view-block and finally compute the three communicated sub-view-blocks. 
 
-What is needed is a generic approach that, based on the executing program, schedules the communication and computation in an overlapping pattern. Since Python is an interpreted interactive programming language it is not possible to schedule communication and computation operation at compile time. Instead some kind of look-ahead technique is required to determine the communication and computation operations used in the program. 
-
+What is needed is a generic approach that, based on the executing program, schedules the communication and computation in an overlapping pattern. Since Python is an interpreted interactive programming language it is not possible to schedule communication and computation operation at compile time. Instead some kind of look-ahead technique is required to determine the communication and computation operations used in the program at runtime. 
 
 
 \section{Lazy Evaluation}
 To make it possible for a scheduler to schedule communication behind computation operations we introduce Lazy Evaluation. During the execution of a DistNumPy program all MPI-processes records the requested array operations rather than applying them immediately. The operations are maintained in a convenient data structure and at a later point all MPI-processes perform the operations. The idea is that by having a bunch of operations to carry out it may be possible to schedule communication and computation operations that have no mutual dependencies in parallel.
 
+We will only introduce lazy evaluation for Python operations that involve DistNumPy arrays. Python operations that do not include DistNumPy arrays will simple be executed by the Python interpreter immediately. Thus DistNumPy array operations that involve program branches will also have to be executed immediately because a branch may lead to non-DistNumPy operations. What this boils down to is: whenever we encounter a branch all previously recorded operations must be executed. This mechanism of executing all previously recorded operation we will call an \emph{operation flush}. The two only other conditions that can trigger an operation flush is when the number of recorded operations reaches a user-defined threshold or when the Python interpreter reaches the end of the program. Furthermore only complete flushes are used.
+
 
 \subsection{The Dependency System}
-The main challenge when introducing Lazy Evaluation is to implement a dependency system that schedules operations in a performance efficient manner while the dependency system overhead is kept at an acceptable level.
+The main challenge when introducing Lazy Evaluation is to implement a dependency system that schedules operations in a performance efficient manner while the overhead is kept at an acceptable level.
 
-A directed acyclic graph (DAG) is a conveniently data structure to store the operations and the operation dependencies in. The nodes of the DAG represent operations and the edges represent the dependencies between the operations. 
+A directed acyclic graph (DAG) is a conveniently data structure to store operations and operation dependencies in. The nodes of the DAG represent operations and the edges represent the dependencies between the operations. E.g. a DAG with two nodes $A$ and $B$ and an edge from $A$ to $B$ means that $A$ must be executed before $B$ to preserve correctness of the overall program. Additionally all nodes that have no dependencies is maintained in a queue called \emph{ready queue}. The ready queue makes it possible in to find operations that are ready to be executed in constant time.
+
+\begin{figure}
+\begin{lstlisting}
+base = array([1,2,3,4])
+A = base[:2]
+B = base[2:]
+C = base[1:3]
+T = A + B
+C = T * A
+\end{lstlisting}
+ \caption{}
+ \label{lst:code_eg}
+\end{figure}
+
+
+
+\begin{figure}
+ \centering
+ \includegraphics[width=50px]{gfx/dependency_system}
+ \caption{dependency system}
+ \label{fig:dependency_system}
+\end{figure}
+
+
+
+A straightforward approach to insert a node in the DAG is simple to compare the new node with all nodes already located in the DAG and in case of a conflict a edge is added. The time complexity of insertion is then $O(n)$ where $n$ is the number of operation in the DAG and the construction of the complete DAG is $O(n^2)$. In worse case this approach is optimal because the longest path through the DAG is always $n$. However, we have introduced some heuristics to speed up the common case. 
+
+\subsubsection{Operation Flush}
+The main goal when performing an operation flush is to overlap communication with computation. Our approach to achieve this goal is to initiate communication at the earliest point in time and only do computation when all communication has been initiated. Furthermore, to make sure that there is progress in the MPI layer we check for finished communication in between multiple computation operations. The following is the flow of our operation flush algorithm:
+\begin{enumerate}
+\item Initiate all communication operation in the ready queue.
+\item Check in a non-blocking manner if some communication operations have finished and remove possible finished communication operations from the ready queue and the DAG. Furthermore, register operations that now have no dependencies into the ready queue.
+\item If there is only computation operations in the ready queue execute one of them and remove it from the ready queue and the DAG.
+\item Go back to step one if there is any operation left in the ready queue, else we are finished.
+\end{enumerate}
+The algorithm maintains the folowing three invariants:
+\begin{enumerate}
+\item All operations that are ready are located in the ready queue.
+\item We only start the execution of a computation node when there is no communication node in the ready queue.
+\item We only wait for communication when the ready queue have no computation nodes.
+\end{enumerate}
+
+
+
+\subsubsection{Dependency Heuristic}
+Experiments with lazy evaluation using the dependency DAG shows that the overhead associated with the creation of the DAG is very time consuming and becomes the dominating performance factor. This cannot be helped in the worse case, but we have introduced a heuristic to speed up the common case. The heuristic is based on the observation that it is only possible to have conflict between sub-view-blocks that are part of the same base-block on the same array. The idea is that we introduce a DAG for every base-block with the assumption that in the common case the size of each DAG will be dramatically reduced. Actually we will organize the operations in a linked list rather than in a DAG because we expect the number of operation to be at a level where it makes sense to simply perform a linear walkthrough when inserting an operation.
+
+
+
+
+
+
 
 
 
