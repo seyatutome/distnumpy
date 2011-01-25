@@ -136,18 +136,20 @@ The main challenge when introducing Lazy Evaluation is to implement a dependency
 
 The partial order of operations imposed by operational dependencies is normally represented by a directed acyclic graph (DAG)\cite{AhSeUl86}. The nodes of the DAG represent operations and the edges represent the dependencies between the operations. E.g. a DAG with two nodes $A$ and $B$ and an edge from $A$ to $B$ means that $A$ must be executed before $B$ to preserve correctness of the overall program. 
 
-Our first lazy evaluation approach makes use of a DAG to contain all recorded operations. A small Python program that makes use of DistNumPy and the corresponding DAG is illustrated in figure 3 and 4. Beside the DAG our dependency system also consist of a \emph{ready queue}, which is a queue of recorded operations that do not have any dependencies. The ready queue makes it possible in to find operations that are ready to be executed in the time complexity of $O(1)$.
+Our first lazy evaluation approach makes use of a DAG to contain all recorded operations. When an operation is recorded it is split across the sub-view-blocks that are involved in the operation and for each such operation a DAG node is created. A small Python program that makes use of DistNumPy and the corresponding DAG is illustrated in figure \ref{lst:code_eg} and \ref{fig:DAG}. 
 
+Beside the DAG our dependency system also consist of a \emph{ready queue}, which is a queue of recorded operations that do not have any dependencies. The ready queue makes it possible in to find operations that are ready to be executed in the time complexity of $O(1)$.
 
 \begin{figure}
 \begin{lstlisting}
 import numpy as np
 base = np.array([1,2,3,4,5],dist=True)
-A = base[:2]  #A = [1,2]
-B = base[3:]  #B = [4,5]
-T = A + B     #T = [5,7]
-T = T * B	  #T = [20,35]
-print T
+A = base[:2]    #A = [1,2]
+R = base[2]     #R = [3]
+B = base[3:]    #B = [4,5]
+T = A + B       #T = [5,7]
+R = T[1] * B[0] #R = [28]
+print base      #out: [1,2,28,4,5]
 \end{lstlisting}
  \caption{This is an example of a small Python program that makes use of DistNumPy.}
  \label{lst:code_eg}
@@ -156,7 +158,7 @@ print T
 \begin{figure}
  \centering
  \includegraphics[width=120px]{gfx/dag}
- \caption{This figure illustrates a directed acyclic graph that represents the operational dependencies in figure \ref{lst:code_eg}. The size of the view-blocks is one and the number inside brackets is a reference to a view-block.}
+ \caption{This figure illustrates a directed acyclic graph that represents the operational dependencies in figure \ref{lst:code_eg}. The block size is one and the numbers inside brackets are references to specific blocks. Note that a block size of one entails that base-blocks, view-blocks and sub-view-blocks all are identical.}
  \label{fig:DAG}
 \end{figure}
 
@@ -171,7 +173,7 @@ The main goal when performing an operation flush is to overlap communication wit
 \begin{enumerate}
 \item Initiate all communication operation in the ready queue.
 \item Check in a non-blocking manner if some communication operations have finished and remove possible finished communication operations from the ready queue and the DAG. Furthermore, register operations that now have no dependencies into the ready queue.
-\item If there is only computation operations in the ready queue execute one of them and remove it from the ready queue and the DAG.
+\item If there is only computation operations in the ready queue, execute one of them and remove it from the ready queue and the DAG.
 \item Go back to step one if there is any operation left in the ready queue, else we are finished.
 \end{enumerate}
 The algorithm maintains the folowing three invariants:
@@ -189,20 +191,31 @@ Experiments with lazy evaluation using the dependency DAG shows that the overhea
 The heuristic is based on the observation that normally a computation is evenly spread out between all sub-view-blocks in the involved arrays and that it is only possible to have conflict between sub-view-blocks that are part of the same base-block. The idea is that instead of having one DAG only, we introduce a DAG for each base-block -- the assumption is that in the common case the size of each DAG will be dramatically reduced. Actually we expect the size of the DAGs to be at a level where it makes most sense to use a linked list rather than in a full-blown DAG.
 
 
+\subsubsection{The non-DAG approach}
+The approach we end up using does not use any DAGs -- instead the operation dependencies are represented by a number of operation-nodes and access-nodes. An operation-node contains all information need to execute the operation on a set of sub-view-blocks and there is a pointer to an access-node for each sub-view-block. Access-nodes represent memory access to a sub-view-block, which can be either reading or writing. E.g. an addition operation on three sub-view-blocks is represented by two read access and one write access. All access-nodes are placed in dependency-lists based on the base-block that they are accessing. Figure \ref{fig:dependency_system_term} goes through all the building blocks that make up our dependency system.
+
+%An operation is said to be ready for execution when none of its sub-view-block access conflicts with any earlier recorded access.  
+
+\def\imagetop#1{\vtop{\null\hbox{#1}}}
 \begin{figure}
  \centering
- \includegraphics[width=50px]{gfx/dependency_system}
- \caption{dependency system}
- \label{fig:dependency_system}
+\begin{tabular}{cp{165px}}
+\imagetop{\includegraphics[width=30px]{gfx/dependency_system_access}} & \vspace{1px} All access-nodes that access the same base-block are linked together in a dependency-list. The order of the list is simply based on the time of node insertion (descending order). Additionally an access-node contains the information needed to determine whether it conflict with other access-nodes.\newline \\
+\imagetop{\includegraphics[width=50px]{gfx/dependency_system_op}} & An operation-node has a pointer to all access-nodes that are involved in the operation and attached to an operation is a reference counter that specifies the number of conflicts associated with the operation. When the counter reach zero the operation is ready for execution. At some point when the operation has been executed the operation-node and all access-nodes are completely remove from the dependency system.\\
+\imagetop{\includegraphics[width=28px]{gfx/dependency_system_block}} & \vspace{3px} A base-block simply contains a pointer to the first access-node in the dependency-list.\\
+\end{tabular}
+ \caption{dependency system term}
+ \label{fig:dependency_system_term}
 \end{figure}
 
 
 
-
-
-
-
-
+\begin{figure}
+ \centering
+ \includegraphics[width=\linewidth]{gfx/dependency_system}
+ \caption{dependency system}
+ \label{fig:dependency_system}
+\end{figure}
 
 %Lazy evaluation on these data blocks are managed through a simple dependency list for each block. When a NumPy operation is issued it is split across the sub-view blocks that are involved in the operation. For each such operation on a sub-view block a set of tasks are created, one for each combined set of data-blocks to sub-view blocks. Dependencies are then added to the dependency-list of each data-block that is involved, each dependency link back to the individual tasks. When the number of dependencies on a task reached zero the task may be moved to the ready-queue. But before this is done we traverse the dependency list and include any other task that can be merged into the ready task, given that they could execute in parallel with the task or could execute given the task was done, when two tasks are merged into one, the remaining list is traversed under the same rules but for the merged task.
 
