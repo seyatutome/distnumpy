@@ -2765,37 +2765,8 @@ static void do_MATMUL(dndview *A, dndview *B, dndview *C)
 static char dndnode_conflict(const dndop *A, const int Aidx,
                              const dndop *B, const int Bidx)
 {
-    npy_intp d;
-    char Aaccesstype = A->accesstypes[Aidx];
-    dndarray *Abase = A->views[Aidx]->base;
-    char Baccesstype = B->accesstypes[Bidx];
-    dndarray *Bbase = B->views[Bidx]->base;
-    dndsvb *Asvb = A->svbs[Aidx];
-    dndsvb *Bsvb = B->svbs[Bidx];
+    return 1;
 
-    if(Abase->uid == Bbase->uid)
-        if(Aaccesstype == DNPY_WRITE || Baccesstype == DNPY_WRITE)
-        {
-            if(Asvb == NULL || Bsvb == NULL)
-                return 1;//Depend on the whole array.
-
-            char conflict = 1;
-            for(d=0; d<Abase->ndims; d++)
-            {
-                if(Bsvb->start[d] >=
-                   Asvb->start[d] + Asvb->nsteps[d]
-                   ||
-                   Asvb->start[d] >=
-                   Bsvb->start[d] + Bsvb->nsteps[d])
-                {
-                    conflict = 0;
-                    break;//No conflict at the svb level.
-                }
-            }
-            if(conflict)
-                return 1;
-        }
-    return 0;
 }/* dndnode_conflict */
 
 /*===================================================================
@@ -2943,7 +2914,6 @@ static void dag_svb_flush(void)
     MPI_Request reqs[DNPY_RDY_QUEUE_MAXSIZE];
     MPI_Status reqstatus[DNPY_RDY_QUEUE_MAXSIZE];
     dndop *comm[DNPY_RDY_QUEUE_MAXSIZE];
-    dndop *ncomm[DNPY_RDY_QUEUE_MAXSIZE];
     MPI_Datatype dtype[DNPY_RDY_QUEUE_MAXSIZE];
     npy_intp dtypesize=0;
 
@@ -3049,46 +3019,38 @@ static void dag_svb_flush(void)
             else
             {
                 assert(ready_queue[i]->optype == DNPY_NONCOMM);
-                ncomm[ncommsize++] = ready_queue[i];
+                dndop *op = ready_queue[i];//Using a FILO order.
+                dndop **op2apply = workbuf_nextfree;
+                npy_intp nops = dag_svg_remove(op, op2apply);
+                npy_intp cur_op;
+                workbuf_nextfree += nops;//Reserve memory.
+
+                for(cur_op=0; cur_op < nops; cur_op++)
+                {
+                    op = op2apply[cur_op];
+                    switch(op->op)
+                    {
+                        case DNPY_UFUNC:
+                            apply_ufunc((dndop_ufunc*)op);
+                            Py_DECREF(((dndop_ufunc*)op)->PyOp);
+                            break;
+                        case DNPY_DESTROY_ARRAY:
+                            assert(op->narys == 1);
+                            assert(op->views[0] != NULL);
+                            rm_dndview(op->views[0]->uid);
+                            break;
+                        default:
+                            fprintf(stderr, "Unknown DAG operation: %s.\n",
+                                    optype2str(op->op));
+                            MPI_Abort(MPI_COMM_WORLD, -1);
+                    }
+                }
+                workbuf_nextfree -= nops;//Unreserve memory.
             }
         }
         //The ready queue is now empty.
         ready_queue_size = 0;
 
-        //Apply one non-communication node and move new non-depend
-        //nodes to the ready queue.
-        //Instead of moving new non-depended non-communication nodes
-        //to the ready queue they are directly applied.
-        if(ncommsize > 0)
-        {
-            dndop *op = ncomm[--ncommsize];//Using a FILO order.
-            dndop **op2apply = workbuf_nextfree;
-            npy_intp nops = dag_svg_remove(op, op2apply);
-            npy_intp cur_op;
-            workbuf_nextfree += nops;//Reserve memory.
-
-            for(cur_op=0; cur_op < nops; cur_op++)
-            {
-                op = op2apply[cur_op];
-                switch(op->op)
-                {
-                    case DNPY_UFUNC:
-                        apply_ufunc((dndop_ufunc*)op);
-                        Py_DECREF(((dndop_ufunc*)op)->PyOp);
-                        break;
-                    case DNPY_DESTROY_ARRAY:
-                        assert(op->narys == 1);
-                        assert(op->views[0] != NULL);
-                        rm_dndview(op->views[0]->uid);
-                        break;
-                    default:
-                        fprintf(stderr, "Unknown DAG operation: %s.\n",
-                                optype2str(op->op));
-                        MPI_Abort(MPI_COMM_WORLD, -1);
-                }
-            }
-            workbuf_nextfree -= nops;//Unreserve memory.
-        }
         //Test for ready communication and possibly move new non-depend
         //nodes to the ready queue. Furthermore, if there is nothing
         //else to do (no operations that are ready) we wait.
