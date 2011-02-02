@@ -39,7 +39,7 @@ numbers=left, numberstyle=\ttfamily\bfseries\footnotesize
 %\titlebanner{DistNumPy}        % These are ignored unless
 \preprintfooter{DistNumPy}   % 'preprint' option specified.
 
-\title{Generic Latency Hiding for Distributed Numerical Python by Means of Lazy Evaluation}
+\title{Automatic Latency Hiding for Task Oriented Computation using Lazy Evaluation}
 
 \authorinfo{Mads Ruben Burgdorff Kristensen \\ Brian Vinter}
            {eScience Centre\\ University of Copenhagen\\ Denmark}
@@ -52,16 +52,120 @@ numbers=left, numberstyle=\ttfamily\bfseries\footnotesize
 \end{abstract}
 
 \section{Introduction}
-In this paper, we introduce generic latency hiding for Distributed Numerical Python (DistNumPy)\cite{kristensen10_dnumpy}, which is a library for doing numerical computation in Python that targets scalable distributed memory architectures. DistNumPy extends the NumPy module\cite{numpy}, which is popular for scientific programming. Replacing NumPy with DistNumPy enables the user to write sequential Python programs that seamlessly utilize distributed memory architectures.
+A crucial part of today’s research makes use of computer clusters to perform scientific computations. Engineers and scientists has to develop and implement algorithms that not only assistant their research but also has to fully utilize computer clusters. This is a particular challenge when the scientific computation requires a tightly coupled communication scheme, in which the communication may hinder good performance and scalability.
 
-Hiding communication latency is a well-known technique to improve the performance and scalability of communication bound problems. We define latency hiding informally as in \cite{Strumpen94latencyhiding} -- ``a technique to increase processor utilization by transferring data via the network while continuing with the computation at the same time''.
+Communication latency hiding is a well-known technique to improve the performance and scalability of communication bound problems and is mandatory in many scientific computations. We define latency hiding informally as in \cite{Strumpen94latencyhiding} -- ``a technique to increase processor utilization by transferring data via the network while continuing with the computation at the same time''.
 
-There exist many methods to implement latency hiding and most of them are tailored to a particular problem. The current method that DistNumPy make use of is tailored to operations on identical distributed arrays. However, a broad range of DistNumPy programs make use of distributed arrays that do not share identical distribution schemes. In this paper, we therefore introduce a generic method for latency hiding that is not tailored to any particular problem.
+When implementing latency hiding the overall performance depends on two issues: the ability of the communication layer to handle the communication asynchronously and the amount of computation that can overlap the communication -- in this paper we will focus on the latter issue.
+
+When a researcher implement latency hiding the implementation is often tightly coupled to a specific problem. The researcher will have to analyze the computation and identify how to divide the computation into tasks that enables the system to communicate one task while computing another. The difficulty of this work depends on the particular problem but it most cases it is very cumbersome and orthogonal to the research domain scientists and engineers are mostly interested in.
+
+In this paper, we introduce an abstract module to handle latency hiding at runtime.
+
+
+%There exist many methods to implement latency hiding and most of them are tailored to a particular problem. The current method that DistNumPy make use of is tailored to operations on identical distributed arrays. However, a broad range of DistNumPy programs make use of distributed arrays that do not share identical distribution schemes. In this paper, we therefore introduce a generic method for latency hiding that is not tailored to any particular problem.
 
 \subsection{Motivation}
 \subsection{Related work}
 
-\section{Distributed Numerical Python}
+
+
+\section{Dependency Theory}
+A computation, C, may be represented as a sequence of atomic operations, tasks:
+\begin{equation*}
+C=[t_0,t_1,...,t_n]
+\end{equation*}
+where $t_i$ represents the i'th such task in the computational sequence, C. Further a task may be represented at a tuple
+\begin{equation*}
+T=(O,D)
+\end{equation*}
+where $O$ is the operator in the task and $D$ is the set of data involved in $O$, $D=\{d_0,d_1,...d_m\}$. Using the datasets it is possible to determine a dependency between two tasks in $C$, such that we define dependency $E$ between two tasks as:
+\begin{equation*}
+e_{t_i, t_j} = 
+ \left\{
+	\begin{matrix}
+        True, & if D_i \cap D_j \neq \emptyset\\
+        False, & otherwise
+    \end{matrix}
+ \right.
+\end{equation*}
+Any such computation may be represented as a directed acyclic graph, where the nodes represents an atomic task within the computation. In this paper we use a DAG, G, which is represented as a tuple:
+\begin{equation*}
+G=(N,E,M)
+\end{equation*}
+where $N$ is the nodes in the DAG and each $n_i$ corresponds to some element in C, $t_j$. $E$ represents the edges in the DAG,i.e. $e_{t_i,t_j}$ represents an dependency between the tasks $n_i$ and $n_j$.
+\begin{equation*}
+E = \{e_{t_i,t_j}\} \mid e_{t_i,t_j}=True
+\end{equation*}
+This definition means that the sequence
+\begin{equation*}
+[(+,c,a,b),(+,e,c,d),(f,c,e)]
+\end{equation*}
+translates into the DAG in figure \ref{fig:dag_theory1}.
+
+
+\begin{figure}
+ \centering
+ \includegraphics[width=60px]{gfx/dag_theory1}
+ \caption{A simple, but fully connected, DAG.}
+ \label{fig:dag_theory1}
+\end{figure}
+
+
+From such a DAG one can then now define a set of tasks that are ready, $R$, for exectuion as the nodes in the dag without any input edges.
+\begin{equation*}
+R = \forall n_i \in N \mid \{e_{*,t_i}\} = \emptyset,
+\end{equation*}
+where * matches any task.
+
+Once a node is executed it is removed from the DAG, which in turn removes any edges from the node, which may enable other nodes to join the ready-set. If tasks are extended to include an execution time any given DAG may statically be reduced to a schedule which ensures maximum concurrency. Given however that the execution environment is distributed, the DAG must be extended to include localtion information. The location information could be mapped to the data elements, however if we assume that all data in a task must be located at the same execution element for it to perform we can also model the location on the tasks, which is what we choose to do here. Thus we define a list $L$ of locations of tasks:
+\begin{equation*}
+L={l_0,l_1,...,l_n}
+\end{equation*}
+
+Including the locations in the DAG we get a definition
+\begin{equation*}
+G=(N,E,M,L)
+\end{equation*}
+
+
+The DAG can then be, automatically, extended to include transfers from one task to another if the location of the two tasks are not placed at the same computing element.
+
+\begin{equation*}
+\forall e_{t_i,t_j} \in E \mid l_i \neq l_j : t_i,e_{t_i,t_j},t_j \mapsto t_i,e_{t_i,t_{new}},t_{new},e_{t_{new},t_j},t_j
+\end{equation*}
+where
+\begin{equation*}
+n_{new} = Transfer(dependency(D_j))
+\end{equation*}
+and
+\begin{equation*}
+dependency(D_j) = D_i \cap D_j \setminus dependency(D_i)
+\end{equation*}
+Thus if the previous example is extended to execute at three different locations, $[(\alpha,+,c,a,b),(\beta,+,e,c,d),(\delta, f,c,e)]$ translates into the DAG in figure \ref{fig:dag_theory2} and with the transfer nodes inserted in figure \ref{fig:dag_theory3}.
+
+
+\begin{figure}
+  \begin{center}
+    \subfloat[\label{fig:dag_theory2}]{\includegraphics[width=60px]{gfx/dag_theory2}}
+    \subfloat[\label{fig:dag_theory3}]{\includegraphics[width=115px]{gfx/dag_theory3}}
+    \caption{A simple DAG, extended with locations.}
+    \label{fig:MonteCarlo}
+  \end{center}
+\end{figure}
+
+
+
+
+
+\section{Dependency Algorithm}
+
+
+\section{Dependency Data Structure}
+
+
+
+\section{Distributed Numerical Python as an Example}
 The programming language Python combined with the numerical library NumPy\cite{numpy} has become a popular numerical framework amongst researchers. It offers a high level programming language to implement new algorithms that support a broad range of high-level operations directly on vectors and matrices.
 
 The idea in NumPy is to provide a numerical extension to the Python language that enables the Python language to be both high productive and high performing. NumPy provides not only an API to standardized numerical solvers, but also a possibility to develop new numerical solvers that are both implemented and efficiently executed in Python, much like the idea behind the MATLAB\cite{guide1998mathworks} framework. 
