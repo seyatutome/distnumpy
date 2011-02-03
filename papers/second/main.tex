@@ -7,6 +7,8 @@
 % authoryear    To obtain author/year citation style instead of numeric.
 
 \usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{textcomp}
 \usepackage[dvips]{graphicx}
 \DeclareGraphicsExtensions{.eps, .ps}
 \usepackage[caption=false,font=footnotesize]{subfig}
@@ -67,7 +69,50 @@ In this paper, we introduce an abstract module to handle latency hiding at runti
 
 \subsection{Motivation}
 \subsection{Related work}
+Libraries and programming languages that strive to support parallelism in a high productive manner is a well-known concept. In a perfect framework all parallelism introduced by the framework is completely transparent to the user while the performance and scalability archived is optimal. However, most frameworks require the user to specify some kind of parallelism -- either explicitly by using parallel directives or implicitly by using parallel data structures. In Table \ref{fig:lang} we go through a variety of frameworks that all facilitate parallelism and we use the following three terms to categorize them.
+\begin{description}
+\item[Code-Centric] Frameworks that depend on the user to specify code regions that may be beneficial to execute in parallel given that the execution comply with possible data dependencies.
+\item[Data-Centric] Frameworks that require the user to divide global structures data into tasks that multiple processes can handle in parallel.
+\item[Distributed Memory] Whether the framework supports distributed memory or shared memory.
+\end{description}
 
+
+Open Multi-Processing (OpenMP)\cite{Dagum98} is a multi-platform shared-memory parallel programming extension for C/C++ and Fortran. OpenMP makes the parallelization of an application easier by handling most of the thread management. OpenMP is capable of parallelize a section of code, such as while-loops and for-loops, when the user make use of the OpenMP directive parallel and OpenMP is therefore code-centric.
+
+The Communicating Sequential Processes algebra, CSP\cite{CSPHoare78}, is a framework for modeling massively concurrent processes and there exists a great diversity of parallel frameworks that implement CSP i.e. PyCSP\cite{PyCSP07} and C++CSP\cite{CSP_Brown03}. Common for all of them is a very code-centric programming model in which the user defines a network of communicating processes and no data is shared among them.
+
+
+High Performance Fortran (HPF) \cite{Loveman93} is a extension of the Fortran-90\cite{adams1992fortran} programming language, which consist of new directives to specify data dependencies and data distribution schemes. It is up to the HPF compiler to parallelize the application and distribute the used data objects. HPF uses the SPMD programming model, but the implementations of HPF applications are similar to sequential implementations because no explicit communication is required. However, it still requires the user to use Fortran-90 and HPF language structures that the compiler is capable of generate parallel code for. Furthermore, to obtain good parallel performance the user must \emph{align} arrays together to reduce communication.
+
+
+Partitioned Global Address Space (PGAS), also known as distributed shared memory, is a group of languages that are designed around a memory model in which a global address space is partitioned such that a portion of it is local to each processor.
+
+Co-Array Fortran\cite{Co-arrayFortran98} is a small language extension of Fortran-95 for parallel processing on Distributed Memory Machines. It introduce PGAS by extending Fortran arrays with a \emph{co-array} dimension. Each process can access remote instances of an array by indexing into the co-array dimensions. A similar PGAS extension called Unified Parallel C (UPC)\cite{Carlson99_UPC} extent the C language with a distributed array declaration. Titanium\cite{Yelick1998_Titanium} is a PGAS dialect of Java that provides a global memory space abstraction whereby all data has a user-controllable processor affinity, but parallel processes may directly reference each other's memory to read and write values. All three are both code-centric and data-centric since the user explicitly expresses the parallelism and the data distribution. The languages provide a high abstraction level, but users still program with the SPMD model in mind, writing code with the understanding that multiple instances of it will be executing cooperatively.
+
+
+
+
+
+
+\begin{table}
+\begin{tabular}{|p{40px}|p{30px}|p{30px}|p{40px}|p{40px}|}
+\hline
+& Code-Centric & Data-Centric & Distributed Memory & Program Model\\
+\hline
+OpenMP & \checkmark & \textdiv & \textdiv & SPMD \\
+\hline
+CSP & \checkmark & \textdiv & \checkmark & MPMD \\
+\hline
+HPF & \checkmark & \textdiv & \checkmark & SPMD \\
+\hline
+PGAS\dag & \checkmark & \checkmark & \checkmark & SPMD \\
+\hline
+DistNumPy & \textdiv & \textdiv & \checkmark & SPMD \\
+\hline
+\end{tabular}
+ \caption{languages. \dag}
+ \label{fig:lang}
+\end{table}
 
 
 \section{Dependency Theory}
