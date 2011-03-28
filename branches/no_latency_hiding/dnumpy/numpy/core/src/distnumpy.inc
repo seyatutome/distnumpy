@@ -35,6 +35,8 @@ static dndop *ready_queue[DNPY_RDY_QUEUE_MAXSIZE];
 static npy_intp ready_queue_size=0;
 //Unique MPI tag.
 npy_intp mpi_tag=0;
+//Memory pool.
+static dndmem *mem_pool = NULL;
 //Pointers to the cblas functions.
 typedef void (cblas_func_type)(const enum CBLAS_ORDER Order,...);
 static cblas_func_type *cblas_dgemm_func = NULL;
@@ -58,7 +60,9 @@ static void dag_svb_add(dndnode *nodes, int nnodes);
     static unsigned long long t_app_total=0, t_dag_svb_flush=0,     \
         t_dag_svb_add=0, t_dag_svb_remove=0, t_calc_vblock=0,       \
         t_ufunc_svb=0, t_apply_ufunc=0, t_ufunc_comm=0,             \
-        t_arydata_malloc=0, t_arydata_free=0;
+        t_arydata_malloc=0, t_arydata_free=0, t_reduce_1d=0,        \
+        t_zerofill=0, t_msg2slaves=0, t_reduce_nd=0,                \
+        t_reduce_nd_apply=0, t_comm_init=0;
     #define DNDTIME(output)                                         \
         gettimeofday(&tv, &tz);                                     \
         output = (unsigned long long) tv.tv_usec +                  \
@@ -67,6 +71,7 @@ static void dag_svb_add(dndnode *nodes, int nnodes);
         gettimeofday(&tv, &tz);                                     \
         sum += ((unsigned long long) tv.tv_usec +                   \
                 (unsigned long long) tv.tv_sec * 1000000) - in;
+    static npy_intp mem_pool_reused = 0;
 #endif
 
 /*===================================================================
@@ -432,8 +437,12 @@ static void rm_dndview(npy_intp uid)
                             unsigned long long tdelta;
                             DNDTIME(tdelta);
                         #endif
+                        dndmem *mem = (dndmem*) (view->base->data -
+                                                 sizeof(dndmem));
 
-                        MPI_Free_mem(view->base->data);
+                        //Put the allocated memory in front of the pool.
+                        mem->next = mem_pool;
+                        mem_pool = mem;
 
                         #ifdef DNDY_TIME
                             DNDTIME_SUM(tdelta, t_arydata_free)
@@ -465,8 +474,16 @@ static void msg2slaves(npy_intp *msg, int msgsize)
         MPI_Abort(MPI_COMM_WORLD, -1);
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    #ifdef DNDY_TIME
+        unsigned long long tdelta;
+        DNDTIME(tdelta);
+    #endif
+
     MPI_Bcast(msg, DNPY_MAX_MSG_SIZE, MPI_BYTE, 0, MPI_COMM_WORLD);
+
+    #ifdef DNDY_TIME
+        DNDTIME_SUM(tdelta, t_msg2slaves)
+    #endif
 
 } /* msg2slaves */
 
@@ -520,6 +537,23 @@ calc_svb_MPIdatatype(const dndview *view, dndsvb *svb)
     return comm_viewNEW;
 }/* calc_svb_MPIdatatype */
 
+/*===================================================================
+ *
+ * Frees the memory pool from a given memory allocation.
+ * Private.
+ */
+static void
+free_mem_pool(dndmem *mem)
+{
+    while(mem != NULL)
+    {
+        dndmem *next = mem->next;
+        MPI_Free_mem(mem);
+        mem = next;
+    }
+} /* free_mem_pool */
+
+
 
 /*===================================================================
  *
@@ -533,14 +567,72 @@ delayed_array_allocation(dndarray *ary)
         unsigned long long tdelta;
         DNDTIME(tdelta);
     #endif
+    npy_intp size = ary->nelements * ary->elsize;
+    npy_intp count = 0;
+    dndmem *free = NULL;
 
-    if(ary->data == NULL)
-        if(MPI_Alloc_mem(ary->nelements * ary->elsize,
-                         MPI_INFO_NULL, &ary->data) != MPI_SUCCESS)
+    if(ary->data != NULL)//Already allocated.
+        return;
+
+    //Check if there is some free memory in the memory pool.
+    if(mem_pool != NULL)
+    {
+        dndmem *prev = mem_pool;
+        dndmem *next = mem_pool->next;
+
+        //Handle first iteration as a special case.
+        if(mem_pool->size == size)
+        {
+            ary->data = ((char*)mem_pool) + sizeof(dndmem);
+            mem_pool = mem_pool->next;//Remove from pool.
+            #ifdef DNDY_TIME
+                ++mem_pool_reused;
+            #endif
+        }
+        else//Handle the rest.
+        {
+            while(next != NULL)
+            {
+                assert(prev->next == next);
+                if(next->size == size)
+                {
+                    ary->data = ((char*)next) + sizeof(dndmem);
+                    prev->next = next->next;//Remove from pool.
+                    #ifdef DNDY_TIME
+                        ++mem_pool_reused;
+                    #endif
+                    break;
+                }
+                if(++count == DNPY_MAX_MEM_POOL)
+                {
+                    //Will remove all mem after this one.
+                    prev->next = NULL;
+                    free = next;
+                }
+
+                //Go to next memory allocation.
+                prev = next;
+                next = next->next;
+            }
+        }
+    }
+
+    if(ary->data == NULL)//Need to allocate new memory.
+    {
+        dndmem *mem;
+        if(MPI_Alloc_mem(size + sizeof(dndmem), MPI_INFO_NULL,
+                         &mem) != MPI_SUCCESS)
         {
             fprintf(stderr, "Out of memory!\n");
             MPI_Abort(MPI_COMM_WORLD, -1);
         }
+        mem->size = size;
+        ary->data = (char*) (mem + 1);
+    }
+
+    //Reduce the pool size to DNPY_MAX_MEM_POOL.
+    if(free != NULL)
+        free_mem_pool(free);
 
     #ifdef DNDY_TIME
         DNDTIME_SUM(tdelta, t_arydata_malloc)
@@ -1063,6 +1155,41 @@ static void do_INIT_PROC_GRID(npy_intp *new_cart_dim_sizes)
         printf("\n");
     #endif
 } /* do_INIT_PROC_GRID */
+
+
+/*===================================================================
+ *
+ * Message handler for RESET_TIME.
+ * Private.
+ */
+static void do_RESET_TIME(void)
+{
+    //Print debug info.
+    #ifdef DISTNUMPY_DEBUG
+        printf("RESET_TIME\n");
+    #endif
+
+    #ifdef DNDY_TIME
+        t_dag_svb_flush=0;
+        t_dag_svb_add=0;
+        t_dag_svb_remove=0;
+        t_calc_vblock=0;
+        t_ufunc_svb=0;
+        t_apply_ufunc=0;
+        t_ufunc_comm=0;
+        t_arydata_malloc=0;
+        t_arydata_free=0;
+        t_reduce_1d=0;
+        t_reduce_nd=0;
+        t_reduce_nd_apply=0;
+        t_zerofill=0;
+        t_msg2slaves=0;
+        t_comm_init=0;
+        DNDTIME(t_app_total);
+        mem_pool_reused=0;
+    #endif
+
+} /* do_RESET_TIME */
 
 /*===================================================================
  *
@@ -1968,6 +2095,11 @@ static void do_UFUNC_REDUCE(npy_intp in_ary_uid,
         MPI_Abort(MPI_COMM_WORLD, -1);
     }
 
+    #ifdef DNDY_TIME
+        unsigned long long tdelta;
+        DNDTIME(tdelta);
+    #endif
+
     //If output is a scalar we just use this simple method.
     if(in_ary->ndims == 1)
     {
@@ -2040,11 +2172,17 @@ static void do_UFUNC_REDUCE(npy_intp in_ary_uid,
         }
         Py_DECREF(local_scalar);
         Py_DECREF(PyOp);
+
+        #ifdef DNDY_TIME
+            DNDTIME_SUM(tdelta, t_reduce_1d)
+        #endif
+
         return;
     }
 
     dndview *out_view = get_dndview(out_ary_uid);
     dndarray *out_ary = out_view->base;
+    PyObject *subres = NULL;
 
     //Print debug info.
     #ifdef DISTNUMPY_DEBUG
@@ -2067,16 +2205,28 @@ static void do_UFUNC_REDUCE(npy_intp in_ary_uid,
     //The senders should send its sub-results to the receiver with
     //identical coordinates beside zero in the axis-dimension.
 
-    PyObject *tmp = PyArray_SimpleNewFromData(in_ary->ndims,
-                                              in_ary->localdims,
-                                              in_ary->dtype,
-                                              in_ary->data);
+    #ifdef DNDY_TIME
+        unsigned long long tdelta2;
+        DNDTIME(tdelta2);
+    #endif
 
-    //All MPI-processes computes its own sub-result.
-    PyObject *subres = PyObject_CallMethod(PyOp, "reduce", "(O,i)",
-                                           tmp, axis);
-    //Clean up.
-    Py_DECREF(tmp);
+    if(in_ary->nelements > 0)
+    {
+        PyObject *tmp = PyArray_SimpleNewFromData(in_ary->ndims,
+                                                  in_ary->localdims,
+                                                  in_ary->dtype,
+                                                  in_ary->data);
+
+        //All MPI-processes computes its own sub-result.
+        subres = PyObject_CallMethod(PyOp, "reduce", "(O,i)",
+                                               tmp, axis);
+        //Clean up.
+        Py_DECREF(tmp);
+    }
+
+    #ifdef DNDY_TIME
+        DNDTIME_SUM(tdelta2, t_reduce_nd_apply)
+    #endif
 
     int cart_coords[NPY_MAXDIMS];
     rank2cart(in_ary->ndims, myrank, cart_coords);
@@ -2093,32 +2243,46 @@ static void do_UFUNC_REDUCE(npy_intp in_ary_uid,
             cart_coords[axis]++)
         {
             int rank = cart2rank(in_ary->ndims, cart_coords);
-
+            int not_empty = 1;
             //Compute the dim of the receiving array.
             int count = 0;
             for(i=0; i < in_ary->ndims; i++)
+            {
+                npy_intp d = dnumroc(in_ary->dims[i], blocksize,
+                                     cart_coords[i],
+                                     cart_dim_sizes[in_ary->ndims-1][i]);
+                if(d <= 0)//Its empty.
+                {
+                    not_empty = 0;
+                    break;
+                }
                 if(i != axis)
-                    recv_dims[count++] = dnumroc(in_ary->dims[i],
-                                blocksize, cart_coords[i],
-                                cart_dim_sizes[in_ary->ndims-1][i]);
+                    recv_dims[count++] = d;
+            }
 
-            //Receive the sub-result from the sender into 'tmpres'.
-            PyObject *tmpres = PyArray_SimpleNew(out_ary->ndims,
-                               recv_dims, out_ary->dtype);
-            MPI_Recv(PyArray_DATA(tmpres), PyArray_SIZE(tmpres) *
-                     out_ary->elsize, MPI_BYTE, rank, 0,
-                     MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            if(not_empty)
+            {
+                //Receive the sub-result from the sender into 'tmpres'.
+                PyObject *tmpres = PyArray_SimpleNew(out_ary->ndims,
+                                   recv_dims, out_ary->dtype);
 
-            //We use ufunc to "reduce" the two arrays over the
-            //non-existing 'axis' dimension.
-            PyObject *t = PyObject_CallFunction(PyOp, "(O,O,O)", subres,
-                                                tmpres, subres);
-            Py_DECREF(t);
-            Py_DECREF(tmpres);
+                MPI_Recv(PyArray_DATA(tmpres), PyArray_SIZE(tmpres) *
+                         out_ary->elsize, MPI_BYTE, rank, 0,
+                         MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+                //We use ufunc to "reduce" the two arrays over the
+                //non-existing 'axis' dimension.
+                PyObject *t = PyObject_CallFunction(PyOp, "(O,O,O)",
+                                                    subres, tmpres,
+                                                    subres);
+                Py_DECREF(t);
+                Py_DECREF(tmpres);
+            }
         }
     }
-    else//MPI-process is a sender.
+    else if(subres != NULL)//MPI-process is a sender.
     {
+
         //Send subresult to receiver.
         cart_coords[axis] = 0;
         MPI_Send(PyArray_DATA(subres),
@@ -2382,10 +2546,14 @@ static void do_UFUNC_REDUCE(npy_intp in_ary_uid,
     //Sync mpi_tag.
     mpi_tag += out_view->nblocks;
 
+    #ifdef DNDY_TIME
+        DNDTIME_SUM(tdelta, t_reduce_nd)
+    #endif
+
     dag_svb_flush();
 
     //Cleanup
-    Py_DECREF(subres);
+    Py_XDECREF(subres);
     Py_DECREF(PyOp);
 
 } /* do_UFUNC_REDUCE */
@@ -2402,6 +2570,7 @@ static void do_ZEROFILL(dndview *view)
         printf("ZEROFILL - uid: %ld\n", (long)view->uid);
     #endif
 
+
     //Check if the view covers the whole array.
     if(view->alterations != 0)
     {
@@ -2411,9 +2580,19 @@ static void do_ZEROFILL(dndview *view)
 
     dag_svb_flush();
 
+    #ifdef DNDY_TIME
+        unsigned long long tdelta;
+        DNDTIME(tdelta);
+    #endif
+
     delayed_array_allocation(view->base);
     memset(view->base->data, 0, view->base->nelements *
                                 view->base->elsize);
+
+    #ifdef DNDY_TIME
+        DNDTIME_SUM(tdelta, t_zerofill)
+    #endif
+
 } /* do_ZEROFILL */
 
 /*===================================================================
@@ -2928,6 +3107,11 @@ static void dag_svb_flush(void)
     commsize=0; ncommsize=0;
     while(ready_queue_size + commsize + ncommsize > 0)
     {
+        #ifdef DNDY_TIME
+            unsigned long long tdelta2;
+            DNDTIME(tdelta2);
+        #endif
+
         assert(ready_queue_size <= DNPY_RDY_QUEUE_MAXSIZE);
         //Sort the queue into two queues - one for communication and
         //one for non-communication nodes.
@@ -3050,6 +3234,10 @@ static void dag_svb_flush(void)
         }
         //The ready queue is now empty.
         ready_queue_size = 0;
+
+        #ifdef DNDY_TIME
+            DNDTIME_SUM(tdelta2, t_comm_init)
+        #endif
 
         //Test for ready communication and possibly move new non-depend
         //nodes to the ready queue. Furthermore, if there is nothing
@@ -3451,6 +3639,24 @@ dnumpy_evalflush(void)
 /*NUMPY_API
  *===================================================================
  * Public
+ * Reset the timing.
+ */
+static PyObject *
+dnumpy_reset_time(void)
+{
+    //Tell slaves
+    msg[0] = RESET_TIME;
+    msg[1] = DNPY_MSG_END;
+    msg2slaves(msg, 2 * sizeof(npy_intp));
+
+    //The master should also do the operation.
+    do_RESET_TIME();
+    Py_RETURN_NONE;
+} /* dnumpy_reset_time */
+
+/*NUMPY_API
+ *===================================================================
+ * Public
  * Returns True when the two array-view overlap.
  */
 static char
@@ -3459,6 +3665,8 @@ dnumpy_data_overlap(intp Auid, intp Buid)
     dndview *A = get_dndview(Auid);
     dndview *B = get_dndview(Buid);
     //At the moment we only check at the array-base level.
+    if(Auid == Buid)
+        return 0;
     if(A->base->uid == B->base->uid)
         return 1;
     else
@@ -3922,16 +4130,25 @@ dnumpy_exit()
         {
         unsigned long long total=0;
         DNDTIME_SUM(t_app_total, total);
-        printf("app_total:         %6.llu ms\n", total/1000);
-        printf("  dag_svb_flush:   %6.llu ms\n", t_dag_svb_flush/1000);
-        printf("    dag_svb_rm:    %6.llu ms\n", t_dag_svb_remove/1000);
-        printf("    apply_ufunc:   %6.llu ms\n", t_apply_ufunc/1000);
-        printf("    ufunc_comm:    %6.llu ms\n", t_ufunc_comm/1000);
-        printf("    data free:     %6.llu ms\n", t_arydata_free/1000);
-        printf("  ufunc_svb:       %6.llu ms\n", t_ufunc_svb/1000);
-        printf("    dag_svb_add:   %6.llu ms\n", t_dag_svb_add/1000);
-        printf("    calc_vblock:   %6.llu ms\n", t_calc_vblock/1000);
-        printf("  data malloc:     %6.llu ms\n", t_arydata_malloc/1000);
+        printf("app_total:       %6.llu ms\n", total/1000);
+        printf("  dag_svb_flush: %6.llu ms\n", t_dag_svb_flush/1000);
+        printf("    dag_svb_rm:  %6.llu ms\n", t_dag_svb_remove/1000);
+        printf("    apply_ufunc: %6.llu ms\n", t_apply_ufunc/1000);
+        printf("    ufunc_comm:  %6.llu ms\n", t_ufunc_comm/1000);
+        printf("    comm_init:   %6.llu ms\n", t_comm_init/1000);
+        printf("    data free:   %6.llu ms\n", t_arydata_free/1000);
+        printf("  reduce (1-d):  %6.llu ms\n", t_reduce_1d/1000);
+        printf("  reduce (n-d):  %6.llu ms\n", t_reduce_nd/1000);
+        printf("    pre_apply:   %6.llu ms\n", t_reduce_nd_apply/1000);
+        printf("  zerofill:      %6.llu ms\n", t_zerofill/1000);
+        printf("  ufunc_svb:     %6.llu ms\n", t_ufunc_svb/1000);
+        printf("    dag_svb_add: %6.llu ms\n", t_dag_svb_add/1000);
+        printf("    calc_vblock: %6.llu ms\n", t_calc_vblock/1000);
+        printf("  data malloc:   %6.llu ms\n", t_arydata_malloc/1000);
+        printf("  msg2slaves:    %6.llu ms\n", t_msg2slaves/1000);
+        printf("**************************\n");
+        printf("mem reused:      %6.ld\n", mem_pool_reused);
+
         }
     #endif
 
@@ -3951,6 +4168,9 @@ dnumpy_exit()
     if(nleaks > 0)
         printf("DistNumPy - Warning %d distributed arrays didn't get "
                "deallocated.\n", nleaks);
+
+    //Free the memory pool.
+    free_mem_pool(mem_pool);
 
     MPI_Finalize();
 } /* dnumpy_exit */
@@ -4068,7 +4288,6 @@ dnumpy_master_slave_split(void)
         npy_intp d1, d2, d3, d4, d5;
         long l1;
         dndview *ary, *ary2, *ary3;
-        MPI_Barrier(MPI_COMM_WORLD);
         //Receive message from master.
         MPI_Bcast(msg, DNPY_MAX_MSG_SIZE, MPI_BYTE, 0, MPI_COMM_WORLD);
         char *msg_data = (char *) &msg[1];
@@ -4166,6 +4385,9 @@ dnumpy_master_slave_split(void)
                 ary2 = get_dndview(((npy_intp*)msg_data)[1]);
                 ary3 = get_dndview(((npy_intp*)msg_data)[2]);
                 do_MATMUL(ary, ary2, ary3);
+                break;
+            case RESET_TIME:
+                do_RESET_TIME();
                 break;
             default:
                 fprintf(stderr, "Unknown msg: %ld\n", (long)msg[0]);
