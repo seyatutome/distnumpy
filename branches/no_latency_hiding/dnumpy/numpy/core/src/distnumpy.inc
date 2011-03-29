@@ -3294,7 +3294,7 @@ static void dag_svb_flush(void)
             }
             commsize -= fcommsize;
         }
-
+/*
         j=0;
         for(i=0; i<commsize; i++)
             if(comm[i]->optype == DNPY_COMM)
@@ -3312,6 +3312,7 @@ static void dag_svb_flush(void)
                 }
             }
         commsize = j;
+*/
     }
     //Do the delayed MPI type freeing.
     for(i=0; i<dtypesize; i++)
