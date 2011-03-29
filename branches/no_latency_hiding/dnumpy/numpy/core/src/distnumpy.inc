@@ -2945,7 +2945,6 @@ static char dndnode_conflict(const dndop *A, const int Aidx,
                              const dndop *B, const int Bidx)
 {
     return 1;
-
 }/* dndnode_conflict */
 
 /*===================================================================
@@ -3087,12 +3086,14 @@ static npy_intp dag_svg_remove(dndop *op, dndop *op2apply[])
  */
 static void dag_svb_flush(void)
 {
-    npy_intp i, j, f, commsize, ncommsize;
+    npy_intp i, j, f, commsize, icommsize, ncommsize;
     int fcomm[DNPY_RDY_QUEUE_MAXSIZE];
     int fcommsize;
     MPI_Request reqs[DNPY_RDY_QUEUE_MAXSIZE];
     MPI_Status reqstatus[DNPY_RDY_QUEUE_MAXSIZE];
     dndop *comm[DNPY_RDY_QUEUE_MAXSIZE];
+    dndop *icomm[DNPY_RDY_QUEUE_MAXSIZE];
+    dndop *ncomm[DNPY_RDY_QUEUE_MAXSIZE];
     MPI_Datatype dtype[DNPY_RDY_QUEUE_MAXSIZE];
     npy_intp dtypesize=0;
 
@@ -3104,8 +3105,8 @@ static void dag_svb_flush(void)
         dag_svb_dump();
     #endif
 
-    commsize=0; ncommsize=0;
-    while(ready_queue_size + commsize + ncommsize > 0)
+    commsize=0; icommsize=0; ncommsize=0;
+    while(ready_queue_size + commsize + ncommsize + icommsize > 0)
     {
         #ifdef DNDY_TIME
             unsigned long long tdelta2;
@@ -3122,114 +3123,12 @@ static void dag_svb_flush(void)
             //Init. all communication nodes in the ready queue.
             if(ready_queue[i]->optype == DNPY_COMM)
             {
-                dndop_comm *C = (dndop_comm*) ready_queue[i];
-                MPI_Datatype comm_dtype;
-                assert(C->refcount == 0);
-                switch(C->op)
-                {
-                    case DNPY_RECV:
-                        assert(C->narys == 1);
-                        comm_dtype = calc_svb_MPIdatatype(C->views[0],
-                                                          C->svbs[0]);
-                        delayed_array_allocation(C->views[0]->base);
-                        MPI_Irecv(C->views[0]->base->data +
-                                  C->svbs[0]->comm_offset,
-                                  1, comm_dtype,
-                                  C->remote_rank, C->mpi_tag,
-                                  MPI_COMM_WORLD, &reqs[commsize]);
-                        MPI_Type_free(&comm_dtype);
-                        break;
-                    case DNPY_BUF_RECV:
-                        assert(C->narys == 1);
-                        assert(C->svbs[0]->data == NULL);
-                        C->svbs[0]->data = workbuf_nextfree;
-                        workbuf_nextfree += C->svbs[0]->nelem *
-                                            C->views[0]->base->elsize;
-                        assert(C->svbs[0]->data != NULL);
-                        MPI_Irecv(C->svbs[0]->data, C->svbs[0]->nelem,
-                                  C->views[0]->base->mpi_dtype,
-                                  C->remote_rank, C->mpi_tag,
-                                  MPI_COMM_WORLD, &reqs[commsize]);
-                        break;
-                    case DNPY_SEND:
-                        assert(C->narys == 1);
-                        comm_dtype = calc_svb_MPIdatatype(C->views[0],
-                                                          C->svbs[0]);
-                        delayed_array_allocation(C->views[0]->base);
-                        MPI_Isend(C->views[0]->base->data +
-                                  C->svbs[0]->comm_offset,
-                                  1, comm_dtype,
-                                  C->remote_rank, C->mpi_tag,
-                                  MPI_COMM_WORLD, &reqs[commsize]);
-                        dtype[dtypesize++] = comm_dtype;
-                        //At the moment we have to delay this freeing to
-                        //the end of the flush. I’m not sure if this is
-                        //a bug in DistNumPy or the MPICH-2 implementa-
-                        //tion.
-                        //MPI_Type_free(&comm_dtype);
-                        break;
-                    case DNPY_BUF_SEND:
-                        assert(C->narys == 1);
-                        assert(C->svbs[0]->data != NULL);
-                        MPI_Isend(C->svbs[0]->data, C->svbs[0]->nelem,
-                                  C->views[0]->base->mpi_dtype,
-                                  C->remote_rank, C->mpi_tag,
-                                  MPI_COMM_WORLD, &reqs[commsize]);
-                        break;
-                    case DNPY_REDUCE_SEND:
-                        assert(C->narys == 1);
-                        comm_dtype = calc_svb_MPIdatatype(C->views[0],
-                                                          C->svbs[0]);
-                        assert(C->svbs[0]->data != NULL);
-                        MPI_Isend(C->svbs[0]->data +
-                                  C->svbs[0]->comm_offset,
-                                  1, comm_dtype,
-                                  C->remote_rank, C->mpi_tag,
-                                  MPI_COMM_WORLD, &reqs[commsize]);
-                        dtype[dtypesize++] = comm_dtype;
-                        //At the moment we have to delay this freeing to
-                        //the end of the flush. I’m not sure if this is
-                        //a bug in DistNumPy or the MPICH-2 implementa-
-                        //tion.
-                        //MPI_Type_free(&comm_dtype);
-                        break;
-                    default:
-                        fprintf(stderr, "Unknown DAG operation: %s.\n",
-                                optype2str(C->op));
-                        MPI_Abort(MPI_COMM_WORLD, -1);
-                }
-                comm[commsize++] = ready_queue[i];
+                icomm[icommsize++] = ready_queue[i];
             }
             else
             {
                 assert(ready_queue[i]->optype == DNPY_NONCOMM);
-                dndop *op = ready_queue[i];//Using a FILO order.
-                dndop **op2apply = workbuf_nextfree;
-                npy_intp nops = dag_svg_remove(op, op2apply);
-                npy_intp cur_op;
-                workbuf_nextfree += nops;//Reserve memory.
-
-                for(cur_op=0; cur_op < nops; cur_op++)
-                {
-                    op = op2apply[cur_op];
-                    switch(op->op)
-                    {
-                        case DNPY_UFUNC:
-                            apply_ufunc((dndop_ufunc*)op);
-                            Py_DECREF(((dndop_ufunc*)op)->PyOp);
-                            break;
-                        case DNPY_DESTROY_ARRAY:
-                            assert(op->narys == 1);
-                            assert(op->views[0] != NULL);
-                            rm_dndview(op->views[0]->uid);
-                            break;
-                        default:
-                            fprintf(stderr, "Unknown DAG operation: %s.\n",
-                                    optype2str(op->op));
-                            MPI_Abort(MPI_COMM_WORLD, -1);
-                    }
-                }
-                workbuf_nextfree -= nops;//Unreserve memory.
+                ncomm[ncommsize++] = ready_queue[i];
             }
         }
         //The ready queue is now empty.
@@ -3239,24 +3138,134 @@ static void dag_svb_flush(void)
             DNDTIME_SUM(tdelta2, t_comm_init)
         #endif
 
+        //Apply one non-communication node and move new non-depend
+        //nodes to the ready queue.
+        //Instead of moving new non-depended non-communication nodes
+        //to the ready queue they are directly applied.
+        while(ncommsize > 0)
+        {
+            dndop *op = ncomm[--ncommsize];//Using a FILO order.
+            dndop **op2apply = workbuf_nextfree;
+            npy_intp nops = dag_svg_remove(op, op2apply);
+            npy_intp cur_op;
+            workbuf_nextfree += nops;//Reserve memory.
+
+            for(cur_op=0; cur_op < nops; cur_op++)
+            {
+                op = op2apply[cur_op];
+                switch(op->op)
+                {
+                    case DNPY_UFUNC:
+                        apply_ufunc((dndop_ufunc*)op);
+                        Py_DECREF(((dndop_ufunc*)op)->PyOp);
+                        break;
+                    case DNPY_DESTROY_ARRAY:
+                        assert(op->narys == 1);
+                        assert(op->views[0] != NULL);
+                        rm_dndview(op->views[0]->uid);
+                        break;
+                    default:
+                        fprintf(stderr, "Unknown DAG operation: %s.\n",
+                                optype2str(op->op));
+                        MPI_Abort(MPI_COMM_WORLD, -1);
+                }
+            }
+            workbuf_nextfree -= nops;//Unreserve memory.
+        }
         //Test for ready communication and possibly move new non-depend
         //nodes to the ready queue. Furthermore, if there is nothing
         //else to do (no operations that are ready) we wait.
-        if(commsize > 0)
+        if(icommsize + commsize > 0)
         {
             #ifdef DNDY_TIME
                 unsigned long long tdelta2;
                 DNDTIME(tdelta2);
             #endif
 
-            if(ncommsize > 0)
+            if(ready_queue_size == 0)
             {
-                MPI_Testsome(commsize, reqs, &fcommsize, fcomm,
-                             reqstatus);
-                assert(fcommsize != MPI_UNDEFINED);
-            }
-            else if(ready_queue_size == 0)
-            {
+                for(i=0; i<icommsize; i++)
+                {
+                    dndop_comm *C = (dndop_comm*) icomm[i];
+                    MPI_Datatype comm_dtype;
+                    assert(C->refcount == 0);
+                    switch(C->op)
+                    {
+                        case DNPY_RECV:
+                            assert(C->narys == 1);
+                            comm_dtype = calc_svb_MPIdatatype(C->views[0],
+                                                              C->svbs[0]);
+                            delayed_array_allocation(C->views[0]->base);
+                            MPI_Irecv(C->views[0]->base->data +
+                                      C->svbs[0]->comm_offset,
+                                      1, comm_dtype,
+                                      C->remote_rank, C->mpi_tag,
+                                      MPI_COMM_WORLD, &reqs[commsize]);
+                            //MPI_Type_free(&comm_dtype);
+                            break;
+                        case DNPY_BUF_RECV:
+                            assert(C->narys == 1);
+                            assert(C->svbs[0]->data == NULL);
+                            C->svbs[0]->data = workbuf_nextfree;
+                            workbuf_nextfree += C->svbs[0]->nelem *
+                                                C->views[0]->base->elsize;
+                            assert(C->svbs[0]->data != NULL);
+                            MPI_Irecv(C->svbs[0]->data, C->svbs[0]->nelem,
+                                      C->views[0]->base->mpi_dtype,
+                                      C->remote_rank, C->mpi_tag,
+                                      MPI_COMM_WORLD, &reqs[commsize]);
+                            break;
+                        case DNPY_SEND:
+                            assert(C->narys == 1);
+                            comm_dtype = calc_svb_MPIdatatype(C->views[0],
+                                                              C->svbs[0]);
+                            delayed_array_allocation(C->views[0]->base);
+                            MPI_Isend(C->views[0]->base->data +
+                                      C->svbs[0]->comm_offset,
+                                      1, comm_dtype,
+                                      C->remote_rank, C->mpi_tag,
+                                      MPI_COMM_WORLD, &reqs[commsize]);
+                            dtype[dtypesize++] = comm_dtype;
+                            //At the moment we have to delay this freeing to
+                            //the end of the flush. I’m not sure if this is
+                            //a bug in DistNumPy or the MPICH-2 implementa-
+                            //tion.
+                            //MPI_Type_free(&comm_dtype);
+                            break;
+                        case DNPY_BUF_SEND:
+                            assert(C->narys == 1);
+                            assert(C->svbs[0]->data != NULL);
+                            MPI_Isend(C->svbs[0]->data, C->svbs[0]->nelem,
+                                      C->views[0]->base->mpi_dtype,
+                                      C->remote_rank, C->mpi_tag,
+                                      MPI_COMM_WORLD, &reqs[commsize]);
+                            break;
+                        case DNPY_REDUCE_SEND:
+                            assert(C->narys == 1);
+                            comm_dtype = calc_svb_MPIdatatype(C->views[0],
+                                                              C->svbs[0]);
+                            assert(C->svbs[0]->data != NULL);
+                            MPI_Isend(C->svbs[0]->data +
+                                      C->svbs[0]->comm_offset,
+                                      1, comm_dtype,
+                                      C->remote_rank, C->mpi_tag,
+                                      MPI_COMM_WORLD, &reqs[commsize]);
+                            dtype[dtypesize++] = comm_dtype;
+                            //At the moment we have to delay this freeing to
+                            //the end of the flush. I’m not sure if this is
+                            //a bug in DistNumPy or the MPICH-2 implementa-
+                            //tion.
+                            //MPI_Type_free(&comm_dtype);
+                            break;
+                        default:
+                            fprintf(stderr, "Unknown DAG operation: %s.\n",
+                                    optype2str(C->op));
+                            MPI_Abort(MPI_COMM_WORLD, -1);
+                    }
+                    comm[commsize++] = icomm[i];
+                }
+                icommsize = 0;
+
                 MPI_Waitsome(commsize, reqs, &fcommsize, fcomm,
                              reqstatus);
                 assert(fcommsize != MPI_UNDEFINED);
@@ -3285,6 +3294,24 @@ static void dag_svb_flush(void)
             }
             commsize -= fcommsize;
         }
+
+        j=0;
+        for(i=0; i<commsize; i++)
+            if(comm[i]->optype == DNPY_COMM)
+            {
+                dndop_comm *C = (dndop_comm*) comm[i];
+                if(C->op == DNPY_SEND || C->op == DNPY_BUF_SEND)
+                {
+                    MPI_Wait(&reqs[i], &reqstatus[i]);
+                }
+                else
+                {
+                    reqs[j] = reqs[i];
+                    comm[j] = comm[i];
+                    j++;
+                }
+            }
+        commsize = j;
     }
     //Do the delayed MPI type freeing.
     for(i=0; i<dtypesize; i++)

@@ -49,7 +49,7 @@ typedef struct {
 #define DNPY_MAX_NARRAYS 1024
 
 //Maximum number of operation merged together.
-#define DNPY_MAX_OP_MERGES 10
+#define DNPY_MAX_OP_MERGES 1
 
 //Default blocksize
 #define DNPY_BLOCKSIZE 2
