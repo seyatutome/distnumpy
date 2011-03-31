@@ -1,4 +1,4 @@
-\documentclass[preprint]{../PGAS10/sigplanconf}
+\documentclass{acm_proc_article-sp}
 
 % The following \documentclass options may be useful:
 %
@@ -9,8 +9,6 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{textcomp}
-\usepackage[dvips]{graphicx}
-\DeclareGraphicsExtensions{.eps, .ps}
 \usepackage[caption=false,font=footnotesize]{subfig}
 \usepackage{url}
 \usepackage{listings}
@@ -34,27 +32,30 @@ numbers=left, numberstyle=\ttfamily\bfseries\footnotesize
 
 \begin{document}
 
-\conferenceinfo{PGAS'10}{New York, New York USA.} 
-\copyrightyear{2010} 
-\copyrightdata{978-1-4503-0461-0/10/10}
+\title{Managing Latency-Hiding for Automatic Parallelization on Distributed Memory Architectures}
 
-\titlebanner{DistNumPy}        % These are ignored unless
-\preprintfooter{DistNumPy}   % 'preprint' option specified.
-
-\title{Automatic Latency Hiding for Task Oriented Computation using Lazy Evaluation}
-
-\authorinfo{Mads Ruben Burgdorff Kristensen \\ Brian Vinter}
-           {eScience Centre\\ University of Copenhagen\\ Denmark}
-           {madsbk@diku.dk/vinter@diku.dk}
+\numberofauthors{2}
+\author{
+\alignauthor
+Mads Ruben Burgdorff Kristensen\\
+       \affaddr{Niels Bohr Institute}\\
+       \affaddr{Copenhane, Denmark}\\
+       \email{madsbk@nbi.dk}
+\alignauthor
+Brian Vinter\\
+       \affaddr{Niels Bohr Institute}\\
+       \affaddr{Copenhane, Denmark}\\
+       \email{vinter@nbi.dk}
+}
 
 \maketitle
 
 \begin{abstract}
-
+This work introduces a model for managing communication with support for latency-hiding at runtime. For compiled languages, it is often possible to create very efficient schedules for communication but this is not the case for interpreted languages. By maintaining a DAG of the scheduled operations, we are able to aggressively initiate communication and lazily evaluate tasks to allow maximal time for the communication to finish before entering a wait state. We implement this model in DistNumPy, an auto-parallelizing version of numerical Python that allows sequential NumPy programs to run on distributed memory architectures. Furthermore, we present performance comparisons for eight benchmarks with and without automatic latency-hiding. The results shows that our model reduces the time spent on waiting for communication as much as 19 times, from a maximum of 38\% to only 2\% of the total execution time, in a stencil application.
 \end{abstract}
 
 \section{Introduction}
-A crucial part of today’s research makes use of computer clusters to perform scientific computations. Engineers and scientists has to develop and implement algorithms that not only assistant their research but also has to fully utilize computer clusters. This is a particular challenge when the scientific computation requires a tightly coupled communication scheme, in which the communication may hinder good performance and scalability.
+A crucial part of today's research makes use of computer clusters to perform scientific computations. Engineers and scientists has to develop and implement algorithms that not only assistant their research but also has to fully utilize computer clusters. This is a particular challenge when the scientific computation requires a tightly coupled communication scheme, in which the communication may hinder good performance and scalability.
 
 Communication latency hiding is a well-known technique to improve the performance and scalability of communication bound problems and is mandatory in many scientific computations. We define latency hiding informally as in \cite{Strumpen94latencyhiding} -- ``a technique to increase processor utilization by transferring data via the network while continuing with the computation at the same time''.
 
@@ -419,7 +420,10 @@ Our approach places all access-nodes in dependency-lists based on the base-block
 \section{Conclusions}
 
 
-\bibliographystyle{abbrvnat}
+\bibliographystyle{abbrv}
 \bibliography{/home/madsbk/repos/priv/diku/phd/paper_archive/main}
+
+
+
 
 \end{document}

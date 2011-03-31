@@ -52,6 +52,18 @@ numbers=left, numberstyle=\ttfamily\bfseries\footnotesize
 \end{abstract}
 
 \section{Introduction}
+A crucial part of today’s research makes use of computer clusters to perform scientific computations. Engineers and scientists has to develop and implement algorithms that not only assistant their research but also has to fully utilize computer clusters. This is a particular challenge when the scientific computation requires a tightly coupled communication scheme, in which the communication may hinder good performance and scalability.
+
+Communication latency hiding is a well-known technique to improve the performance and scalability of communication bound problems and is mandatory in many scientific computations. We define latency hiding informally as in \cite{Strumpen94latencyhiding} -- ``a technique to increase processor utilization by transferring data via the network while continuing with the computation at the same time''.
+
+When implementing latency hiding the overall performance depends on two issues: the ability of the communication layer to handle the communication asynchronously and the amount of computation that can overlap the communication -- in this paper we will focus on the latter issue.
+
+When a researcher implement latency hiding the implementation is often tightly coupled to a specific problem. The researcher will have to analyze the computation and identify how to divide the computation into tasks that enables the system to communicate one task while computing another. The difficulty of this work depends on the particular problem but it most cases it is very cumbersome and orthogonal to the research domain scientists and engineers are mostly interested in.
+
+In this paper, we introduce an abstract module to handle latency hiding at runtime.
+
+
+
 In this paper, we introduce generic latency hiding for Distributed Numerical Python (DistNumPy)\cite{kristensen10_dnumpy}, which is a library for doing numerical computation in Python that targets scalable distributed memory architectures. DistNumPy extends the NumPy module\cite{numpy}, which is popular for scientific programming. Replacing NumPy with DistNumPy enables the user to write sequential Python programs that seamlessly utilize distributed memory architectures.
 
 Hiding communication latency is a well-known technique to improve the performance and scalability of communication bound problems. We define latency hiding informally as in \cite{Strumpen94latencyhiding} -- ``a technique to increase processor utilization by transferring data via the network while continuing with the computation at the same time''.
