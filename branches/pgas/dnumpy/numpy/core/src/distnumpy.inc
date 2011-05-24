@@ -1268,8 +1268,8 @@ static void do_CREATE_ARRAY(dndarray *ary, dndview *view)
 
     //Print debug info.
     #ifdef DISTNUMPY_DEBUG
-        printf("CREATE_ARRAY - uid: %ld, dtype: %s(%d),"
-               " nelem: %ld, ndims: %d, dims: {",
+        printf("rank %d CREATE_ARRAY - uid: %ld, dtype: %s(%d),"
+               " nelem: %ld, ndims: %d, dims: {", myrank,
                (long) view->uid,
                types_numpy2str(ary->dtype), ary->elsize,
                (long)nelements, ndims);
@@ -1378,6 +1378,9 @@ static void do_CREATE_VIEW(npy_intp org_view_uid, dndview *newview)
 static void do_PUTGET_ITEM(int Direction, dndview *view, char* item,
                            npy_intp coord[NPY_MAXDIMS])
 {
+    printf("PUT_ITEM and GET_ITEM not supported\n");
+    MPI_Abort(MPI_COMM_WORLD, -1);
+
     npy_intp i,j,b,offset;
     npy_intp n, s;
     npy_intp tcoord[NPY_MAXDIMS];
@@ -3499,9 +3502,6 @@ dnumpy_create_dndarray(int ndims, intp dims[NPY_MAXDIMS], int dtype,
     msg2slaves(msg,2*sizeof(npy_intp)+sizeof(dndarray)+sizeof(dndview));
 
     //The master should also do the operation
-    #ifdef DISTNUMPY_DEBUG
-        printf("Rank 0 received msg: ");
-    #endif
     do_CREATE_ARRAY(newarray, newview);
 
     //Freeup memory.
@@ -3669,16 +3669,13 @@ dnumpy_create_dndview(intp org_view_uid, int nslice,
 static PyObject *
 dnumpy_evalflush(void)
 {
-    //Tell slaves
-    msg[0] = DNPY_EVALFLUSH;
-    msg[1] = DNPY_MSG_END;
-    msg2slaves(msg, 2 * sizeof(npy_intp));
-
     //The master should also do the operation.
     #ifdef DISTNUMPY_DEBUG
         printf("Rank 0 received msg: EVALFLUSH\n");
     #endif
     dag_svb_flush();
+
+    MPI_Barrier(MPI_COMM_WORLD);
     Py_RETURN_NONE;
 } /* dnumpy_evalflush */
 
@@ -4148,6 +4145,70 @@ dnumpy_matrix_multiplication(intp Auid, intp Buid, intp Cuid)
 
 
 /*NUMPY_API
+ *===================================================================
+ * Public
+ */
+static int
+dnumpy_copy_numpy2dnumpy(PyObject* src, intp dest_uid)
+{
+    int i, j;
+    //Get arrray structs.
+    dndview *dest = get_dndview(dest_uid);
+    printf("dnumpy_copy_numpy2dnumpy\n");
+    dag_svb_flush();
+
+    //We only support distributed base-arrays.
+    if(dest->alterations != 0)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "When copying a "
+                        "non-distributed array into a distribued "
+                        "array, the distributed array must not be a "
+                        "view of an array.");
+        return -1;
+    }
+
+    //Make sure the Nunpy array is (C-style) contiguous and behaved.
+    src = PyArray_ContiguousFromAny(src, dest->base->dtype, 0,
+                                    NPY_MAXDIMS);
+    if(src == NULL)
+        return -1;
+
+    if(PyArray_NDIM(src) != dest->ndims)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "The two arrays must have"
+                        " the same number of dimensions.");
+        return -1;
+    }
+
+    //Check that the shape of the two arrays match.
+    for(i=0; i<dest->ndims; ++i)
+        if(PyArray_DIM(src, i) != dest->base->localdims[i])
+        {
+            char err[1024*10];
+            sprintf(err,"The shape of the local array must match the "
+                        "local part of the distributed array, "
+                        "which have shape: (");
+            for(j=0; j<dest->ndims-1; ++j)
+                sprintf(err+strlen(err),"%ld, ",
+                        dest->base->localdims[j]);
+            sprintf(err+strlen(err),"%ld)\n",
+                    dest->base->localdims[dest->ndims-1]);
+            PyErr_SetString(PyExc_RuntimeError, err);
+            return -1;
+        }
+
+    delayed_array_allocation(dest->base);
+    assert(PyArray_NBYTES(src) == dest->base->nelements *
+                                  dest->base->elsize);
+    memcpy(dest->base->data, PyArray_BYTES(src), dest->base->nelements *
+                                                 dest->base->elsize);
+
+    return 0;
+} /* dnumpy_copy_numpy2dnumpy */
+
+
+
+/*NUMPY_API
  * ===================================================================
  * Public
  * De-initialization of distnumpy.
@@ -4156,16 +4217,7 @@ static void
 dnumpy_exit()
 {
     int i;
-    if(myrank == 0)
-    {
-        //Shutdown slaves
-        msg[0] = DNPY_SHUTDOWN;
-        msg[1] = DNPY_MSG_END;
-        msg2slaves(msg, 2 * sizeof(npy_intp));
-        #ifdef DISTNUMPY_DEBUG
-            printf("Rank 0 received msg: SHUTDOWN\n");
-        #endif
-    }
+
     //Make sure that the sub-view-block DAG is flushed.
     dag_svb_flush();
 
@@ -4262,7 +4314,7 @@ dnumpy_master_slave_split(void)
         msg[2] = DNPY_MSG_END;
         msg2slaves(msg, 3 * sizeof(npy_intp));
         #ifdef DISTNUMPY_DEBUG
-            printf("Rank 0 received msg: ");
+            printf("Rank %d received msg: ", myrank);
         #endif
         do_INIT_BLOCKSIZE(msg[1]);
 
@@ -4347,6 +4399,7 @@ dnumpy_master_slave_split(void)
                 break;
             case DNPY_INIT_PROC_GRID:
                 do_INIT_PROC_GRID((npy_intp*)msg_data);
+                shutdown = 1;
                 break;
             case DNPY_CREATE_ARRAY:
                 t1 = msg_data + sizeof(dndarray);
@@ -4440,7 +4493,8 @@ dnumpy_master_slave_split(void)
                 MPI_Abort(MPI_COMM_WORLD, -1);
         }
     }
-    return Py_False;
+    printf("Slave start\n");
+    return Py_True;
 
 } /* dnumpy_master_slave_split */
 

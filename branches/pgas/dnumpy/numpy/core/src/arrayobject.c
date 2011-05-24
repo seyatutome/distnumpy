@@ -1117,10 +1117,12 @@ _array_copy_into(PyArrayObject *dest, PyArrayObject *src, int usecopy)
         }
         else if(!PyArray_ISDISTRIBUTED(src))
         {
+            return dnumpy_copy_numpy2dnumpy((PyObject *)src, PyArray_DNDUID(dest));
+            /*
             PyErr_SetString(PyExc_RuntimeError, "Copying a "
                     "non-distributed array into a distribued "
                     "array is not supported");
-            return -1;
+            */
         }
         //This is just to make sure that the dimensions match.
         PyObject* tmpIter = PyArray_MultiIterNew(2,src,dest);
