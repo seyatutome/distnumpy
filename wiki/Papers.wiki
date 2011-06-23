@@ -1,6 +1,4 @@
 #summary DistNumPy Papers
-== Papers ==
-
 
 M. R. B. Kristensen and B. Vinter. 
 <a href="http://distnumpy.googlecode.com/files/kristensen10.pdf">Numerical Python
