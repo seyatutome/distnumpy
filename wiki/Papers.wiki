@@ -1,4 +1,5 @@
 #summary DistNumPy Papers
+#labels Featured
 
 M. R. B. Kristensen and B. Vinter. 
 <a href="http://distnumpy.googlecode.com/files/kristensen10.pdf">Numerical Python
