@@ -11,7 +11,7 @@ CXX=mpic++ CC="mpicc -DMPICH_SKIP_MPICXX" python setup.py install --prefix /your
 }}}
 
 == Cray XE6 (hopper.nersc.gov) ==
-This is not need in hopper:
+This is not need in hopper. However, you may have to use a clean NumPy installation (v 1.3) when compiling SciPy because the frontend is not allowed to call MPI.
 {{{
 CXX=CC CC=cc python setup.py install --prefix /your/dir/
 }}}
