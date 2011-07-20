@@ -1,0 +1,11 @@
+#summary SciPy Installation Guide
+#labels Phase-Deploy
+
+== Requirements ==
+DistNumPy works together with SciPy version 0.7.1. 
+
+== Generic Installation  ==
+To install SciPy together with MPICH2 we need to tell the mpicc compiler not to use the C++ header:
+{{{
+CXX=mpic++ CC="mpicc -DMPICH_SKIP_MPICXX" python setup.py install --prefix /your/dir/
+}}}
