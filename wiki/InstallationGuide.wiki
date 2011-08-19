@@ -1,4 +1,5 @@
 #summary Installation Guide
+#labels Phase-Deploy,Featured
 
 == Requirements ==
 Beside the requirements described in `INSTALL.txt`, you need a working MPI-2 installation and the MPI-2 installation must expose `mpicc` in `$PATH`.
@@ -29,6 +30,7 @@ And then submit like:
 {{{
 qsub -n 2 -t 30 --mode smp --env PYTHONPATH=/your/dir/ /bgsys/drivers/ppcfloor/gnu-linux/bin/python your_program.py
 }}}
+Now, one should be able to build DistNumPy as usual
 
 
 == Cray XE6 (hopper.nersc.gov) ==
@@ -62,3 +64,62 @@ export CRAY_ROOTFS=DSL
 
 aprun -n 2 Python-2.6/install/bin/python distnumpy/test/dnumpytest.py -e test_IO.py
 }}}
+
+== Optimized BLAS  ==
+In order to use a vendor optimized BLAS library, such as MKL, ACL and SCI, you have to compile CBLAS, which is are C wrapper for BLAS.
+
+First, download the CBLAS source from netlib:
+{{{
+wget http://www.netlib.org/blas/blast-forum/cblas.tgz
+tar -xzf cblas.tgz
+}}}
+Change to the CBLAS directory and copy Makefile.LINUX to Makefile.in. Add correct compiler commands and paths to Makefile.in:
+{{{
+...
+#-----------------------------------------------------------------------------
+# Libraries and includs
+#-----------------------------------------------------------------------------
+
+BLLIB = libblas.a
+CBLIB = ../lib/libblas.a
+
+#-----------------------------------------------------------------------------
+# Compilers
+#-----------------------------------------------------------------------------
+
+CC = cc
+FC = ftn
+LOADER = $(FC)
+
+#-----------------------------------------------------------------------------
+# Flags for Compilers
+#-----------------------------------------------------------------------------
+
+CFLAGS = -O3 -DADD_ -fPIC
+FFLAGS = -O3 -fPIC
+...
+}}}
+Finally, build CBLAS:
+{{{
+make
+}}}
+You are now ready to build DistNumPy with the newly created CBLAS wrapper. The standard Numpy tries to use only the ATLAS BLAS, and in order to use different BLAS one has to manually edit the file `numpy/core/setup.py`. Comment out an if statement as follows:
+{{{
+def get_dotblas_sources(ext, build_dir):
+  if blas_info:
+      # if ('NO_ATLAS_INFO',1) in blas_info.get('define_macros',[]):
+      #     return None # dotblas needs ATLAS, Fortran compiled blas will not be sufficient.
+      return ext.depends[:1]
+}}}
+Then, add the correct libraries and paths to the file `site.cfg`:
+{{{
+[blas]
+blas_libs = blas
+library_dirs = /global/homes/m/madsbk/CBLAS/lib
+
+[lapack]
+lapack_libs = sci
+library_dirs = /opt/xt-libsci/10.5.01/pgi/lib
+}}}
+
+Now, one should be able to build DistNumPy as usual.
