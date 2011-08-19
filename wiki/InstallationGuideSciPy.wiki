@@ -12,3 +12,6 @@ CXX=mpic++ CC="mpicc -DMPICH_SKIP_MPICXX" python setup.py install --prefix /your
 
 == Cray XE6 (hopper.nersc.gov) ==
 On Hopper the frontend node is not allowed to call the MPI API. Therefore, you have to use a clean NumPy installation (v 1.3) when compiling SciPy, or comment out the content of the `dnumpy_init()` and `dnumpy_exit()` in `dnumpy/numpy/core/src/distnumpy.inc`
+{{{
+CXX=CC CC="cc -DMPICH_SKIP_MPICXX" python setup.py install --prefix /your/dir/
+}}}
