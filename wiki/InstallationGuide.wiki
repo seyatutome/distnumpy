@@ -21,7 +21,7 @@ CC=mpicc python setup.py install --prefix /your/dir/
 And then make sure that `/your/dir/` is in your `$PYTHONPATH`.
 
 === OpenMP === 
-DistNumPy can make use of OpenMP to utilize shared memory parallelism. To enable you compiler must support OpenMP - using GCC it looks like this: 
+DistNumPy can make use of [http://openmp.org OpenMP] to utilize shared memory parallelism. To enable you compiler must support OpenMP - using GCC it looks like this: 
 {{{
 CFLAGS=-fopenmp LDFLAGS=-lgomp CC=mpicc python setup.py install --prefix /your/dir/
 }}}
