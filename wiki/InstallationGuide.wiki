@@ -20,6 +20,12 @@ CC=mpicc python setup.py install --prefix /your/dir/
 
 And then make sure that `/your/dir/` is in your `$PYTHONPATH`.
 
+=== OpenMP === 
+DistNumPy can make use of OpenMP to utilize shared memory parallelism. To enable you compiler must support OpenMP - using GCC it looks like this: 
+{{{
+CFLAGS=-fopenmp LDFLAGS=-lgomp CC=mpicc python setup.py install --prefix /your/dir/
+}}}
+NB: the macro `_OPENMP` must be defined, which must compiler automatically do when compiling with the OpenMP flag.
 
 == Blue Gene/P (surveyor.alcf.anl.gov) ==
 To install DistNumPy run the following command:
@@ -45,7 +51,7 @@ Compile DistNumPy using the compiled Python:
 {{{
 module unload xt-shmem
 export XTPE_LINK_TYPE=dynamic
-CC=cc ~/Python2.6/bin/python dnumpy/setup.py install --prefix=/your/dir/
+CFLAGS=-D_OPENMP CC=cc ~/Python2.6/bin/python dnumpy/setup.py install --prefix=/your/dir/
 }}}
 
 A job file could look like this:
