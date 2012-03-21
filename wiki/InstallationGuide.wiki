@@ -1,6 +1,9 @@
 #summary Installation Guide
 #labels Phase-Deploy,Featured
 
+== Download  ==
+svn checkout http://distnumpy.googlecode.com/svn/trunk/ distnumpy
+
 == Requirements ==
 Beside the requirements described in `INSTALL.txt`, you need a working MPI-2 installation and the MPI-2 installation must expose `mpicc` in `$PATH`.
 
