@@ -25,7 +25,8 @@
 ||ravel (returns a non-distributed array)||
 ||flatten (returns a non-distributed array)||
 ||diagonal (Only complete views and axises must be default)||
-
+||save||
+||load||
 
 = NumPy API not supported =
 
